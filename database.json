@@ -1,0 +1,153 @@
+{
+  "kullanicilar": [
+    {
+      "id": 2,
+      "kullaniciAdi": "SametAslan",
+      "sifre": "445944",
+      "yetkiSeviyesi": 1
+    }
+  ],
+  "urunler": [
+    {
+      "id": 1,
+      "barkod": "123123",
+      "urunAdi": "DENEME",
+      "alisFiyati": 122,
+      "satisFiyati": 123,
+      "stokMiktari": 101
+    },
+    {
+      "id": 2,
+      "barkod": "4321",
+      "urunAdi": "4321",
+      "alisFiyati": 4321,
+      "satisFiyati": 4321,
+      "stokMiktari": 4319
+    }
+  ],
+  "satislar": [
+    {
+      "id": 8,
+      "tarih": "2025-06-30T15:41:00.552Z",
+      "kullaniciId": 2,
+      "toplamTutar": 123,
+      "dailyReportCounted": true
+    },
+    {
+      "id": 9,
+      "tarih": "2025-06-30T15:41:05.653Z",
+      "kullaniciId": 2,
+      "toplamTutar": 123,
+      "dailyReportCounted": true
+    },
+    {
+      "id": 10,
+      "tarih": "2025-06-30T15:41:14.418Z",
+      "kullaniciId": 2,
+      "toplamTutar": 4321,
+      "dailyReportCounted": true
+    },
+    {
+      "id": 11,
+      "tarih": "2025-06-30T15:45:27.147Z",
+      "kullaniciId": 2,
+      "toplamTutar": 246
+    },
+    {
+      "id": 12,
+      "tarih": "2025-06-30T15:45:29.857Z",
+      "kullaniciId": 2,
+      "toplamTutar": 4321
+    },
+    {
+      "id": 13,
+      "tarih": "2025-06-30T15:48:45.662Z",
+      "kullaniciId": 2,
+      "toplamTutar": 123
+    },
+    {
+      "id": 14,
+      "tarih": "2025-06-30T15:49:39.502Z",
+      "kullaniciId": 2,
+      "toplamTutar": 123
+    },
+    {
+      "id": 15,
+      "tarih": "2025-06-30T15:50:06.938Z",
+      "kullaniciId": 2,
+      "toplamTutar": 123
+    }
+  ],
+  "satisDetay": [
+    {
+      "id": 8,
+      "satisId": 8,
+      "urunId": 1,
+      "miktar": 1,
+      "birimFiyat": 123,
+      "toplamFiyat": 123
+    },
+    {
+      "id": 9,
+      "satisId": 9,
+      "urunId": 1,
+      "miktar": 1,
+      "birimFiyat": 123,
+      "toplamFiyat": 123
+    },
+    {
+      "id": 10,
+      "satisId": 10,
+      "urunId": 2,
+      "miktar": 1,
+      "birimFiyat": 4321,
+      "toplamFiyat": 4321
+    },
+    {
+      "id": 11,
+      "satisId": 11,
+      "urunId": 1,
+      "miktar": 2,
+      "birimFiyat": 123,
+      "toplamFiyat": 246
+    },
+    {
+      "id": 12,
+      "satisId": 12,
+      "urunId": 2,
+      "miktar": 1,
+      "birimFiyat": 4321,
+      "toplamFiyat": 4321
+    },
+    {
+      "id": 13,
+      "satisId": 13,
+      "urunId": 1,
+      "miktar": 1,
+      "birimFiyat": 123,
+      "toplamFiyat": 123
+    },
+    {
+      "id": 14,
+      "satisId": 14,
+      "urunId": 1,
+      "miktar": 1,
+      "birimFiyat": 123,
+      "toplamFiyat": 123
+    },
+    {
+      "id": 15,
+      "satisId": 15,
+      "urunId": 1,
+      "miktar": 1,
+      "birimFiyat": 123,
+      "toplamFiyat": 123
+    }
+  ],
+  "lastId": {
+    "kullanicilar": 2,
+    "urunler": 2,
+    "satislar": 15,
+    "satisDetay": 15
+  }
+}
