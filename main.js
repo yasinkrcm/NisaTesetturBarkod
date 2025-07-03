@@ -188,7 +188,8 @@ ipcMain.handle('updateProduct', (event, product) => {
                 urunAdi: product.urunAdi,
                 alisFiyati: product.alisFiyati,
                 satisFiyati: product.satisFiyati,
-                stokMiktari: product.stokMiktari
+                stokMiktari: product.stokMiktari,
+                indirim: product.indirim || 0
             })
             .write();
         return true;

@@ -145,7 +145,8 @@ function initializeFormHandlers() {
                 urunAdi: document.getElementById('newUrunAdi').value,
                 alisFiyati: parseFloat(document.getElementById('newAlisFiyati').value),
                 satisFiyati: parseFloat(document.getElementById('newSatisFiyati').value),
-                stokMiktari: parseInt(document.getElementById('newStokMiktari').value)
+                stokMiktari: parseInt(document.getElementById('newStokMiktari').value),
+                indirim: parseFloat(document.getElementById('newIndirim').value || 0)
             };
 
             try {
@@ -681,7 +682,13 @@ async function showProducts() {
                                                 <div class="text-sm text-gray-500">${p.alisFiyati.toFixed(2)} TL</div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="font-medium text-indigo-600">${p.satisFiyati.toFixed(2)} TL</div>
+                                                <div class="font-medium text-indigo-600">
+                                                    ${p.satisFiyati.toFixed(2)} TL
+                                                    ${p.indirim > 0 ? 
+                                                        `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${p.indirim} İndirim</span>
+                                                        <div class="text-sm text-red-500">İndirimli: ${(p.satisFiyati * (1 - p.indirim/100)).toFixed(2)} TL</div>` 
+                                                    : ''}
+                                                </div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 ${p.stokMiktari > 10 
@@ -691,10 +698,16 @@ async function showProducts() {
                                                 : `<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">${p.stokMiktari} adet</span>`}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button onclick="editProduct(${p.id})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex">
-                                                    <i class="fas fa-edit"></i>
-                                                    <span>Düzenle</span>
-                                                </button>
+                                                <div class="flex justify-end space-x-2">
+                                                    <button onclick="editProduct(${p.id})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex">
+                                                        <i class="fas fa-edit"></i>
+                                                        <span>Düzenle</span>
+                                                    </button>
+                                                    <button onclick="deleteProduct(${p.id})" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                        <span>Sil</span>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     `).join('')}
@@ -822,6 +835,10 @@ function addProduct() {
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">Stok Miktarı</label>
                         <input type="number" id="newStokMiktari" class="w-full px-3 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">İndirim (%)</label>
+                        <input type="number" step="0.01" id="newIndirim" class="w-full px-3 py-2 border rounded-lg" min="0" max="100" value="0">
                     </div>
                     <button type="submit" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600">
                         Ürün Ekle
@@ -1002,13 +1019,33 @@ async function resetDailyReport() {
 }
 
 // Update item quantity in the cart
-function updateItemQuantity(index, newQuantity) {
+async function updateItemQuantity(index, newQuantity) {
     // Don't allow quantity below 1
     if (newQuantity < 1) return;
     
     const item = cart[index];
+    
+    // Check if we have enough stock for the new quantity
+    try {
+        const product = await window.electronAPI.getProduct(item.urunId);
+        if (product && newQuantity > product.stokMiktari) {
+            showNotification(`Yetersiz stok! ${item.urunAdi} için sadece ${product.stokMiktari} adet stok mevcut.`, 'error');
+            return;
+        }
+        
+        // Update the item's discount in case it was changed in the product
+        if (product && product.indirim !== undefined) {
+            item.indirim = product.indirim;
+        }
+    } catch (error) {
+        console.error('Error checking stock:', error);
+    }
+    
     item.miktar = newQuantity;
-    item.toplamFiyat = item.birimFiyat * newQuantity;
+    
+    // Apply discount if any
+    const discountFactor = 1 - (item.indirim / 100 || 0);
+    item.toplamFiyat = item.birimFiyat * newQuantity * discountFactor;
     
     updateCartDisplay();
 }
@@ -1091,6 +1128,10 @@ async function editProduct(id) {
                             <label class="block text-gray-700 text-sm font-bold mb-2">Stok Miktarı</label>
                             <input type="number" id="editStokMiktari" class="w-full px-3 py-2 border rounded-lg" value="${product.stokMiktari}">
                         </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">İndirim (%)</label>
+                            <input type="number" step="0.01" id="editIndirim" class="w-full px-3 py-2 border rounded-lg" value="${product.indirim || 0}" min="0" max="100">
+                        </div>
                         <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">
                             Kaydet
                         </button>
@@ -1115,7 +1156,8 @@ async function editProduct(id) {
                         urunAdi: document.getElementById('editUrunAdi').value,
                         alisFiyati: parseFloat(document.getElementById('editAlisFiyati').value),
                         satisFiyati: parseFloat(document.getElementById('editSatisFiyati').value),
-                        stokMiktari: parseInt(document.getElementById('editStokMiktari').value)
+                        stokMiktari: parseInt(document.getElementById('editStokMiktari').value),
+                        indirim: parseFloat(document.getElementById('editIndirim').value || 0)
                     };
                     
                     try {
@@ -1140,6 +1182,25 @@ async function editProduct(id) {
     }
 }
 
+// Function to delete a product
+async function deleteProduct(id) {
+    try {
+        // Show confirmation dialog
+        if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) {
+            return;
+        }
+        
+        await window.electronAPI.deleteProduct(id);
+        showNotification('Ürün başarıyla silindi!', 'success');
+        
+        // Refresh product list
+        showProducts();
+    } catch (error) {
+        console.error('Delete product error:', error);
+        showNotification('Ürün silinirken bir hata oluştu!', 'error');
+    }
+}
+
 // Handle barcode input when Enter key is pressed
 async function handleBarcodeInput(e) {
     if (e.key === 'Enter') {
@@ -1156,23 +1217,59 @@ async function handleBarcodeInput(e) {
             console.log('Searching for product with barcode:', barcode);
             const product = await window.electronAPI.searchProduct(barcode);
             
+            // Log product details for debugging
             if (product) {
+                console.log('Ürün bulundu:', {
+                    id: product.id,
+                    barkod: product.barkod,
+                    urunAdi: product.urunAdi,
+                    satisFiyati: product.satisFiyati,
+                    stokMiktari: product.stokMiktari,
+                    indirim: product.indirim || 0
+                });
+            }
+            
+            if (product) {
+                // Check if product stock is 0
+                if (product.stokMiktari === 0) {
+                    showNotification(`Ürün Adedi 0! ${product.urunAdi} için satış gerçekleşmedi.`, 'error');
+                    barcodeInput.value = '';
+                    barcodeInput.focus();
+                    return;
+                }
+                
                 // Check if the product is already in the cart
                 const existingIndex = cart.findIndex(item => item.urunId === product.id);
                 
                 if (existingIndex !== -1) {
+                    // Check if adding more would exceed stock
+                    if (cart[existingIndex].miktar + 1 > product.stokMiktari) {
+                        showNotification(`Yetersiz stok! ${product.urunAdi} için sadece ${product.stokMiktari} adet stok mevcut.`, 'error');
+                        return;
+                    }
+                    
+                    // Update discount information from product
+                    if (product.indirim !== undefined) {
+                        cart[existingIndex].indirim = product.indirim;
+                    }
+                    
                     // Increase quantity if already in cart
                     updateItemQuantity(existingIndex, cart[existingIndex].miktar + 1);
                     showNotification(`${product.urunAdi} sepete eklendi!`, 'success');
                 } else {
-                    // Add new product to cart
+                    // Add new product to cart with proper discount handling
+                    const indirim = product.indirim || 0;
+                    const discountFactor = 1 - (indirim / 100);
+                    const discountedPrice = product.satisFiyati * discountFactor;
+                    
                     cart.push({
                         urunId: product.id,
                         barkod: product.barkod,
                         urunAdi: product.urunAdi,
                         birimFiyat: product.satisFiyati,
                         miktar: 1,
-                        toplamFiyat: product.satisFiyati
+                        indirim: indirim,
+                        toplamFiyat: discountedPrice
                     });
                     showNotification(`${product.urunAdi} sepete eklendi!`, 'success');
                 }
@@ -1219,7 +1316,7 @@ function updateCartDisplay() {
     // Calculate the total
     const total = cart.reduce((sum, item) => sum + item.toplamFiyat, 0);
     
-    // Update the cart display
+    // Update the cart display with detailed discount information
     cartItemsContainer.innerHTML = cart.map((item, index) => `
         <div class="py-4 flex items-center justify-between">
             <div class="flex-1">
@@ -1231,7 +1328,13 @@ function updateCartDisplay() {
                         <h3 class="font-medium">${item.urunAdi}</h3>
                         <div class="text-sm text-gray-500">
                             <span>${item.birimFiyat.toFixed(2)} TL x ${item.miktar}</span>
+                            ${item.indirim > 0 ? `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${item.indirim} İndirim</span>` : ''}
                         </div>
+                        ${item.indirim > 0 ? 
+                        `<div class="text-xs text-red-500 flex items-center">
+                            <i class="fas fa-tag mr-1"></i>
+                            <span>İndirimli fiyat: ${(item.birimFiyat * (1 - item.indirim / 100)).toFixed(2)} TL</span>
+                        </div>` : ''}
                     </div>
                 </div>
             </div>
@@ -1239,20 +1342,31 @@ function updateCartDisplay() {
                 <div class="mr-4 text-right">
                     <span class="font-bold">${item.toplamFiyat.toFixed(2)} TL</span>
                 </div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="updateItemQuantity(${index}, ${item.miktar - 1})" 
-                        class="h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200">
-                        <i class="fas fa-minus text-gray-600 text-xs"></i>
-                    </button>
-                    <span class="font-medium text-lg w-6 text-center">${item.miktar}</span>
-                    <button onclick="updateItemQuantity(${index}, ${item.miktar + 1})" 
-                        class="h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200">
-                        <i class="fas fa-plus text-gray-600 text-xs"></i>
-                    </button>
-                    <button onclick="removeFromCart(${index})" 
-                        class="ml-2 h-8 w-8 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200">
-                        <i class="fas fa-trash-alt text-red-600 text-xs"></i>
-                    </button>
+                <div class="flex flex-col">
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateItemQuantity(${index}, ${item.miktar - 1})" 
+                            class="h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200">
+                            <i class="fas fa-minus text-gray-600 text-xs"></i>
+                        </button>
+                        <span class="font-medium text-lg w-6 text-center">${item.miktar}</span>
+                        <button onclick="updateItemQuantity(${index}, ${item.miktar + 1})" 
+                            class="h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200">
+                            <i class="fas fa-plus text-gray-600 text-xs"></i>
+                        </button>
+                        <button onclick="removeFromCart(${index})" 
+                            class="ml-2 h-8 w-8 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200">
+                            <i class="fas fa-trash-alt text-red-600 text-xs"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center mt-2">
+                        <div class="text-xs text-gray-500 mr-2">İndirim:</div>
+                        <input type="number" 
+                            min="0" max="100" 
+                            value="${item.indirim || 0}"
+                            onchange="updateItemDiscount(${index}, this.value)"
+                            class="w-16 h-6 px-1 py-0 text-xs border border-gray-300 rounded">
+                        <span class="text-xs ml-1">%</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1260,4 +1374,21 @@ function updateCartDisplay() {
     
     // Update the total display
     cartTotalElement.textContent = total.toFixed(2);
+}
+
+// Function to update item discount in cart
+function updateItemDiscount(index, discountPercent) {
+    // Validate discount percentage (0-100)
+    const discount = Math.min(Math.max(parseFloat(discountPercent) || 0, 0), 100);
+    
+    const item = cart[index];
+    item.indirim = discount;
+    
+    // Recalculate total price with discount
+    const discountFactor = 1 - (discount / 100);
+    item.toplamFiyat = item.birimFiyat * item.miktar * discountFactor;
+    
+    console.log(`İndirim uygulandı: %${discount}, Birim Fiyat: ${item.birimFiyat} TL, İndirimli Birim Fiyat: ${(item.birimFiyat * discountFactor).toFixed(2)} TL, Toplam: ${item.toplamFiyat.toFixed(2)} TL`);
+    
+    updateCartDisplay();
 }
