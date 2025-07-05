@@ -703,7 +703,9 @@ async function showProducts() {
                                                         <i class="fas fa-edit"></i>
                                                         <span>Düzenle</span>
                                                     </button>
-                                                    <button onclick="deleteProduct(${p.id})" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex">
+                                                    <button onclick="deleteProduct(${p.id})" 
+                                                        class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                                                        title="Bu ürünü sil">
                                                         <i class="fas fa-trash-alt"></i>
                                                         <span>Sil</span>
                                                     </button>
@@ -762,33 +764,84 @@ async function showSales() {
         const mainContent = document.querySelector('#mainApp .flex-1');
         
         mainContent.innerHTML = `
-            <div class="w-full">
-                <div class="bg-white p-4 rounded-lg shadow">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold">Satışlarım</h2>
-                        <button onclick="showMainMenu()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-                            Ana Menü
-                        </button>
+            <div class="w-full max-w-6xl mx-auto">
+                <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-2xl font-bold text-white flex items-center">
+                                <i class="fas fa-receipt mr-3"></i>
+                                Satış Geçmişi
+                            </h2>
+                            <button onclick="showMainMenu()" class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition duration-200 flex items-center shadow-sm">
+                                <i class="fas fa-home mr-2"></i>
+                                Ana Menü
+                            </button>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full table-auto">
-                            <thead>
-                                <tr class="bg-gray-100">
-                                    <th class="px-4 py-2">Tarih</th>
-                                    <th class="px-4 py-2">Ürünler</th>
-                                    <th class="px-4 py-2">Toplam Tutar</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${sales.map(s => `
-                                    <tr class="border-b">
-                                        <td class="px-4 py-2">${new Date(s.tarih).toLocaleString('tr-TR')}</td>
-                                        <td class="px-4 py-2">${s.urunler}</td>
-                                        <td class="px-4 py-2">${s.toplamTutar.toFixed(2)} TL</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
+                    
+                    <div class="p-6">
+                        ${sales.length === 0 ? `
+                            <div class="text-center py-12">
+                                <div class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
+                                    <i class="fas fa-receipt text-gray-400 text-2xl"></i>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-900 mb-2">Henüz Satış Yok</h3>
+                                <p class="text-gray-500">İlk satışınızı yapmak için ana menüye dönün ve ürün taramaya başlayın.</p>
+                            </div>
+                        ` : `
+                            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış No</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürünler</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam Tutar</th>
+                                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        ${sales.map(s => `
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-sm font-medium text-gray-900">
+                                                        ${new Date(s.tarih).toLocaleDateString('tr-TR')}
+                                                    </div>
+                                                    <div class="text-sm text-gray-500">
+                                                        ${new Date(s.tarih).toLocaleTimeString('tr-TR')}
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                        #${s.id}
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4">
+                                                    <div class="text-sm text-gray-900 max-w-xs truncate" title="${s.urunler}">
+                                                        ${s.urunler}
+                                                    </div>
+                                                    <div class="text-sm text-gray-500">
+                                                        ${s.urunSayisi} ürün
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-lg font-bold text-green-600">
+                                                        ${s.toplamTutar.toFixed(2)} TL
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                                    <button onclick="deleteSale(${s.id})" 
+                                                        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                                                        <i class="fas fa-trash-alt mr-1"></i>
+                                                        Sil
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
                     </div>
                 </div>
             </div>
@@ -907,11 +960,18 @@ async function getDailyReport() {
                     </div>
                     
                     <div class="border-t border-gray-200 pt-6">
-                        <button onclick="showResetConfirmation()" 
-                            class="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-4 px-6 rounded-xl flex items-center justify-center transition duration-300 hover:shadow-lg">
-                            <i class="fas fa-sync-alt mr-2"></i>
-                            <span class="font-medium">Gün Sonu Al ve Sıfırla</span>
-                        </button>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button onclick="printCurrentDailyReport()" 
+                                class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-4 px-6 rounded-xl flex items-center justify-center transition duration-300 hover:shadow-lg">
+                                <i class="fas fa-print mr-2"></i>
+                                <span class="font-medium">Raporu Yazdır</span>
+                            </button>
+                            <button onclick="showResetConfirmation()" 
+                                class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-4 px-6 rounded-xl flex items-center justify-center transition duration-300 hover:shadow-lg">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                <span class="font-medium">Gün Sonu Al ve Sıfırla</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -978,11 +1038,25 @@ async function resetDailyReport() {
             loadingOverlay.classList.remove('hidden');
         }
         
+        // Get the report data before resetting for printing
+        const reportData = await window.electronAPI.getDailyReport();
+        
         const result = await window.electronAPI.resetDailyReport();
         hideResetConfirmation();
         
         if (result.success) {
             showNotification(result.message, 'success');
+            
+            // Print end of day report with the data before reset
+            if (reportData.toplamSatis > 0) {
+                try {
+                    await window.electronAPI.printEndOfDayReport(reportData);
+                    showNotification('Gün sonu raporu yazdırılıyor...', 'info');
+                } catch (printError) {
+                    console.error('Print end of day report error:', printError);
+                    showNotification('Gün sonu raporu yazdırılırken bir hata oluştu!', 'error');
+                }
+            }
             
             // Refresh the report display after a short delay to show zeroed values
             setTimeout(async () => {
@@ -1074,6 +1148,20 @@ async function completeSale() {
 
         if (saleId) {
             showNotification('Satış başarıyla tamamlandı!', 'success');
+            
+            // Print receipt
+            try {
+                await window.electronAPI.printSaleReceipt({
+                    saleId: saleId,
+                    items: cart,
+                    totalAmount: totalAmount
+                });
+                showNotification('Fiş yazdırılıyor...', 'info');
+            } catch (printError) {
+                console.error('Print error:', printError);
+                showNotification('Fiş yazdırılırken bir hata oluştu!', 'error');
+            }
+            
             cart = [];
             updateCartDisplay();
             
@@ -1185,19 +1273,57 @@ async function editProduct(id) {
 // Function to delete a product
 async function deleteProduct(id) {
     try {
-        // Show confirmation dialog
-        if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) {
+        // Get product details for better confirmation message
+        const product = await window.electronAPI.getProduct(id);
+        if (!product) {
+            showNotification('Ürün bulunamadı!', 'error');
             return;
         }
         
-        await window.electronAPI.deleteProduct(id);
-        showNotification('Ürün başarıyla silindi!', 'success');
+        // Show detailed confirmation dialog
+        const confirmMessage = `"${product.urunAdi}" ürününü silmek istediğinizden emin misiniz?\n\nÜrün Detayları:\n• Barkod: ${product.barkod}\n• Ürün Adı: ${product.urunAdi}\n• Stok: ${product.stokMiktari} adet\n• Satış Fiyatı: ${product.satisFiyati.toFixed(2)} TL\n\nBu işlem geri alınamaz!`;
         
-        // Refresh product list
-        showProducts();
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        const result = await window.electronAPI.deleteProduct(id);
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            // Refresh product list
+            showProducts();
+        } else {
+            showNotification(result.message, 'error');
+        }
     } catch (error) {
         console.error('Delete product error:', error);
         showNotification('Ürün silinirken bir hata oluştu!', 'error');
+    }
+}
+
+// Function to delete a sale
+async function deleteSale(saleId) {
+    try {
+        // Show confirmation dialog with more detailed warning
+        if (!confirm('Bu satışı silmek istediğinizden emin misiniz?\n\nBu işlem:\n• Satışı tamamen silecek\n• Ürün stoklarını geri yükleyecek\n• Günlük raporlardan düşecek\n\nBu işlem geri alınamaz!')) {
+            return;
+        }
+        
+        const result = await window.electronAPI.deleteSale(saleId);
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            // Refresh sales list
+            showSales();
+            // Refresh statistics
+            await loadStatistics();
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Delete sale error:', error);
+        showNotification('Satış silinirken bir hata oluştu!', 'error');
     }
 }
 
@@ -1391,4 +1517,22 @@ function updateItemDiscount(index, discountPercent) {
     console.log(`İndirim uygulandı: %${discount}, Birim Fiyat: ${item.birimFiyat} TL, İndirimli Birim Fiyat: ${(item.birimFiyat * discountFactor).toFixed(2)} TL, Toplam: ${item.toplamFiyat.toFixed(2)} TL`);
     
     updateCartDisplay();
+}
+
+// Print current daily report
+async function printCurrentDailyReport() {
+    try {
+        const reportData = await window.electronAPI.getDailyReport();
+        
+        if (reportData.toplamSatis === 0) {
+            showNotification('Yazdırılacak satış verisi bulunamadı!', 'error');
+            return;
+        }
+        
+        await window.electronAPI.printEndOfDayReport(reportData);
+        showNotification('Günlük rapor yazdırılıyor...', 'info');
+    } catch (error) {
+        console.error('Print current daily report error:', error);
+        showNotification('Rapor yazdırılırken bir hata oluştu!', 'error');
+    }
 }

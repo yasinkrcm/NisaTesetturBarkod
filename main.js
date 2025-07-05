@@ -317,3 +317,302 @@ ipcMain.handle('resetDailyReport', () => {
         return { success: false, message: "Günlük satışlar sıfırlanırken bir hata oluştu!" };
     }
 });
+
+// Delete product function
+ipcMain.handle('deleteProduct', (event, id) => {
+    try {
+        // Check if product exists
+        const product = db.get('urunler').find({ id: id }).value();
+        if (!product) {
+            return { success: false, message: "Ürün bulunamadı!" };
+        }
+        
+        // Check if product is used in any sales
+        const saleDetails = db.get('satisDetay').filter({ urunId: id }).value();
+        if (saleDetails.length > 0) {
+            return { success: false, message: "Bu ürün satışlarda kullanıldığı için silinemez!" };
+        }
+        
+        // Delete the product
+        db.get('urunler').remove({ id: id }).write();
+        return { success: true, message: "Ürün başarıyla silindi!" };
+    } catch (error) {
+        console.error('Delete product error:', error);
+        return { success: false, message: "Ürün silinirken bir hata oluştu!" };
+    }
+});
+
+// Delete sale function
+ipcMain.handle('deleteSale', (event, saleId) => {
+    try {
+        // Check if sale exists
+        const sale = db.get('satislar').find({ id: saleId }).value();
+        if (!sale) {
+            return { success: false, message: "Satış bulunamadı!" };
+        }
+        
+        // Get sale details to restore stock
+        const saleDetails = db.get('satisDetay').filter({ satisId: saleId }).value();
+        
+        // Restore stock for each product in the sale
+        saleDetails.forEach(detail => {
+            db.get('urunler')
+                .find({ id: detail.urunId })
+                .update('stokMiktari', n => n + detail.miktar)
+                .write();
+        });
+        
+        // Delete sale details first (foreign key constraint)
+        db.get('satisDetay').remove({ satisId: saleId }).write();
+        
+        // Delete the sale
+        db.get('satislar').remove({ id: saleId }).write();
+        
+        return { success: true, message: "Satış başarıyla silindi ve stoklar geri yüklendi!" };
+    } catch (error) {
+        console.error('Delete sale error:', error);
+        return { success: false, message: "Satış silinirken bir hata oluştu!" };
+    }
+});
+
+// Print sale receipt
+ipcMain.handle('printSaleReceipt', (event, saleData) => {
+    try {
+        const { BrowserWindow } = require('electron');
+        
+        // Create a hidden window for printing
+        const printWindow = new BrowserWindow({
+            width: 800,
+            height: 600,
+            show: false,
+            webPreferences: {
+                nodeIntegration: true
+            }
+        });
+        
+        // Create HTML content for the receipt
+        const receiptHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Satış Fişi</title>
+            <style>
+                body {
+                    font-family: 'Courier New', monospace;
+                    font-size: 12px;
+                    margin: 0;
+                    padding: 20px;
+                    width: 300px;
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 1px solid #000;
+                    padding-bottom: 10px;
+                    margin-bottom: 10px;
+                }
+                .title {
+                    font-size: 16px;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                .date {
+                    font-size: 10px;
+                }
+                .items {
+                    margin: 10px 0;
+                }
+                .item {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 2px 0;
+                }
+                .item-name {
+                    flex: 1;
+                }
+                .item-price {
+                    text-align: right;
+                }
+                .total {
+                    border-top: 1px solid #000;
+                    padding-top: 10px;
+                    margin-top: 10px;
+                    font-weight: bold;
+                    text-align: right;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 20px;
+                    font-size: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="title">NİSA TESETTÜR</div>
+                <div class="date">${new Date().toLocaleString('tr-TR')}</div>
+                <div>Satış No: ${saleData.saleId}</div>
+            </div>
+            
+            <div class="items">
+                ${saleData.items.map(item => `
+                    <div class="item">
+                        <span class="item-name">${item.urunAdi} x${item.miktar}</span>
+                        <span class="item-price">${item.toplamFiyat.toFixed(2)} TL</span>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="total">
+                Toplam: ${saleData.totalAmount.toFixed(2)} TL
+            </div>
+            
+            <div class="footer">
+                Bizi tercih ettiğiniz için teşekkürler!
+            </div>
+        </body>
+        </html>
+        `;
+        
+        printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHTML)}`);
+        
+        printWindow.webContents.on('did-finish-load', () => {
+            printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
+                if (success) {
+                    console.log('Print successful');
+                } else {
+                    console.log('Print failed:', reason);
+                }
+                printWindow.close();
+            });
+        });
+        
+        return { success: true };
+    } catch (error) {
+        console.error('Print error:', error);
+        return { success: false, message: "Yazdırma sırasında bir hata oluştu!" };
+    }
+});
+
+// Print end of day report
+ipcMain.handle('printEndOfDayReport', (event, reportData) => {
+    try {
+        const { BrowserWindow } = require('electron');
+        
+        // Create a hidden window for printing
+        const printWindow = new BrowserWindow({
+            width: 800,
+            height: 600,
+            show: false,
+            webPreferences: {
+                nodeIntegration: true
+            }
+        });
+        
+        // Create HTML content for the end of day report
+        const reportHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Gün Sonu Raporu</title>
+            <style>
+                body {
+                    font-family: 'Courier New', monospace;
+                    font-size: 12px;
+                    margin: 0;
+                    padding: 20px;
+                    width: 400px;
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 2px solid #000;
+                    padding-bottom: 10px;
+                    margin-bottom: 20px;
+                }
+                .title {
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                .date {
+                    font-size: 12px;
+                }
+                .stats {
+                    margin: 20px 0;
+                }
+                .stat-row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 8px 0;
+                    padding: 5px 0;
+                    border-bottom: 1px solid #ccc;
+                }
+                .stat-label {
+                    font-weight: bold;
+                }
+                .stat-value {
+                    text-align: right;
+                }
+                .total-row {
+                    border-top: 2px solid #000;
+                    border-bottom: 2px solid #000;
+                    font-weight: bold;
+                    font-size: 14px;
+                    padding: 10px 0;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 30px;
+                    font-size: 10px;
+                    border-top: 1px solid #000;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="title">NİSA TESETTÜR</div>
+                <div class="date">GÜN SONU RAPORU</div>
+                <div class="date">${new Date().toLocaleDateString('tr-TR')}</div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-row">
+                    <span class="stat-label">Toplam Satış Sayısı:</span>
+                    <span class="stat-value">${reportData.toplamSatis}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Toplam Ciro:</span>
+                    <span class="stat-value">${reportData.toplamCiro.toFixed(2)} TL</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Toplam Kar:</span>
+                    <span class="stat-value">${reportData.toplamKar.toFixed(2)} TL</span>
+                </div>
+            </div>
+            
+            <div class="footer">
+                Rapor ${new Date().toLocaleString('tr-TR')} tarihinde oluşturulmuştur.
+            </div>
+        </body>
+        </html>
+        `;
+        
+        printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(reportHTML)}`);
+        
+        printWindow.webContents.on('did-finish-load', () => {
+            printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
+                if (success) {
+                    console.log('End of day report print successful');
+                } else {
+                    console.log('End of day report print failed:', reason);
+                }
+                printWindow.close();
+            });
+        });
+        
+        return { success: true };
+    } catch (error) {
+        console.error('Print end of day report error:', error);
+        return { success: false, message: "Gün sonu raporu yazdırılırken bir hata oluştu!" };
+    }
+});

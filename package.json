@@ -13,7 +13,7 @@
     "lowdb": "^1.0.0"
   },
   "devDependencies": {
-    "electron": "^25.3.0",
+    "electron": "^37.2.0",
     "electron-builder": "^24.6.3"
   },
   "build": {
@@ -37,7 +37,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },

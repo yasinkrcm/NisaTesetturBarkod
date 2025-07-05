@@ -14,7 +14,7 @@
       "urunAdi": "DENEME",
       "alisFiyati": 122,
       "satisFiyati": 100,
-      "stokMiktari": 93,
+      "stokMiktari": 94,
       "indirim": 10
     },
     {
@@ -35,20 +35,6 @@
     }
   ],
   "satislar": [
-    {
-      "id": 8,
-      "tarih": "2025-06-30T15:41:00.552Z",
-      "kullaniciId": 2,
-      "toplamTutar": 123,
-      "dailyReportCounted": true
-    },
-    {
-      "id": 9,
-      "tarih": "2025-06-30T15:41:05.653Z",
-      "kullaniciId": 2,
-      "toplamTutar": 123,
-      "dailyReportCounted": true
-    },
     {
       "id": 10,
       "tarih": "2025-06-30T15:41:14.418Z",
@@ -145,25 +131,16 @@
       "tarih": "2025-07-02T15:45:51.459Z",
       "kullaniciId": 2,
       "toplamTutar": 90
+    },
+    {
+      "id": 25,
+      "tarih": "2025-07-05T20:33:02.118Z",
+      "kullaniciId": 2,
+      "toplamTutar": 90,
+      "dailyReportCounted": true
     }
   ],
   "satisDetay": [
-    {
-      "id": 8,
-      "satisId": 8,
-      "urunId": 1,
-      "miktar": 1,
-      "birimFiyat": 123,
-      "toplamFiyat": 123
-    },
-    {
-      "id": 9,
-      "satisId": 9,
-      "urunId": 1,
-      "miktar": 1,
-      "birimFiyat": 123,
-      "toplamFiyat": 123
-    },
     {
       "id": 10,
       "satisId": 10,
@@ -283,12 +260,20 @@
       "miktar": 1,
       "birimFiyat": 100,
       "toplamFiyat": 90
+    },
+    {
+      "id": 25,
+      "satisId": 25,
+      "urunId": 1,
+      "miktar": 1,
+      "birimFiyat": 100,
+      "toplamFiyat": 90
     }
   ],
   "lastId": {
     "kullanicilar": 2,
     "urunler": 3,
-    "satislar": 24,
-    "satisDetay": 24
+    "satislar": 25,
+    "satisDetay": 25
   }
 }
