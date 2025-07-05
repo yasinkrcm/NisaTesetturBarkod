@@ -77,6 +77,73 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('username').focus();
 });
 
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Only work when main app is visible (not on login screen)
+    if (document.getElementById('mainApp').classList.contains('hidden')) {
+        return;
+    }
+    
+    // Check if user is typing in an input field
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+    }
+    
+    switch (e.key) {
+        case 'F1':
+            e.preventDefault();
+            // Focus barcode input
+            const barcodeInput = document.getElementById('barcodeInput');
+            if (barcodeInput) {
+                barcodeInput.focus();
+                showNotification('Barkod tarama alanına odaklanıldı', 'info');
+            }
+            break;
+            
+        case 'F2':
+            e.preventDefault();
+            // Go to product list
+            showProducts();
+            showNotification('Ürün listesi açıldı (F2)', 'info');
+            break;
+            
+        case 'F3':
+            e.preventDefault();
+            // Go to sales
+            showSales();
+            showNotification('Satışlar sayfası açıldı (F3)', 'info');
+            break;
+            
+        case 'F4':
+            e.preventDefault();
+            // Add new product
+            addProduct();
+            showNotification('Yeni ürün ekleme sayfası açıldı (F4)', 'info');
+            break;
+            
+        case 'F5':
+            e.preventDefault();
+            // Go to daily report
+            getDailyReport();
+            showNotification('Gün sonu raporu açıldı (F5)', 'info');
+            break;
+            
+        case 'F10':
+            e.preventDefault();
+            // Complete sale
+            completeSale();
+            showNotification('Satış tamamlanıyor... (F10)', 'info');
+            break;
+            
+        case 'Escape':
+            e.preventDefault();
+            // Return to main menu
+            showMainMenu();
+            showNotification('Ana menüye dönüldü (ESC)', 'info');
+            break;
+    }
+});
+
 let currentUser = null;
 let cart = [];
 
@@ -159,18 +226,14 @@ function initializeFormHandlers() {
             }
         });
 
-        // Set focus to first input in add product form
-        const firstInput = document.getElementById('newBarkod');
-        if (firstInput) {
-            firstInput.focus();
-        }
+        // Otomatik input focus kaldırıldı
     }
 
     // Barcode input handler
     const barcodeInput = document.getElementById('barcodeInput');
     if (barcodeInput) {
         barcodeInput.addEventListener('keypress', handleBarcodeInput);
-        barcodeInput.focus();
+        // Otomatik input focus kaldırıldı
     }
 }
 
@@ -200,18 +263,14 @@ function setupFormEventListeners() {
             }
         });
 
-        // Focus first input after form is shown
-        const firstInput = document.getElementById('newBarkod');
-        if (firstInput) {
-            firstInput.focus();
-        }
+        // Otomatik input focus kaldırıldı
     }
 
     // Barcode Input
     const barcodeInput = document.getElementById('barcodeInput');
     if (barcodeInput) {
         barcodeInput.addEventListener('keypress', handleBarcodeInput);
-        barcodeInput.focus();
+        // Otomatik input focus kaldırıldı
     }
 }
 
@@ -300,9 +359,10 @@ async function initializeMainApp() {
 
             <!-- Main Content -->
             <div class="flex-1 container mx-auto p-6 flex flex-col lg:flex-row gap-6 overflow-auto">
-                <!-- Left Side - Barcode and Cart -->
+                <!-- Left Side - Main Content Area -->
                 <div class="w-full lg:w-2/3 space-y-6">
-                    <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 hover-card shimmer-bg">
+                    <!-- Barcode Scanner Section (only on main page) -->
+                    <div id="barcodeSection" class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 hover-card shimmer-bg">
                         <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center">
                             <div class="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 mr-3">
                                 <i class="fas fa-search text-indigo-600"></i>
@@ -327,42 +387,8 @@ async function initializeMainApp() {
                         </div>
                     </div>
                     
-                    <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 hover-card">
-                        <div class="flex justify-between items-center mb-5">
-                            <h2 class="text-xl font-semibold text-gray-700 flex items-center">
-                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 mr-3">
-                                    <i class="fas fa-shopping-cart text-indigo-600"></i>
-                                </div>
-                                <span>Sepet</span>
-                            </h2>
-                            <span class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
-                                <i class="fas fa-tag mr-1"></i>
-                                Aktif Satış
-                            </span>
-                        </div>
-                        
-                        <div id="cartItems" class="divide-y divide-gray-100 max-h-64 overflow-auto mb-5 -mx-6 px-6">
-                            <!-- Cart items will be listed here -->
-                        </div>
-                        
-                        <div class="flex flex-col md:flex-row justify-between items-center pt-5 border-t border-gray-100">
-                            <div class="price-tag mb-4 md:mb-0 w-full md:w-auto text-center">
-                                <span class="text-xs uppercase tracking-wide opacity-80">Toplam Tutar</span>
-                                <div class="text-2xl font-bold"><span id="cartTotal">0.00</span> ₺</div>
-                            </div>
-                            
-                            <button onclick="completeSale()" 
-                                class="btn-animated bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-3 rounded-xl shadow-lg flex items-center justify-center w-full md:w-auto transition duration-300 transform hover:-translate-y-1">
-                                <i class="fas fa-check-circle mr-2 text-lg"></i>
-                                <span class="font-medium">Satışı Tamamla</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Side - Quick Actions -->
-                <div class="w-full lg:w-1/3 space-y-6">
-                    <div class="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 rounded-2xl shadow-xl text-white relative overflow-hidden shimmer-bg">
+                    <!-- Quick Actions Section (only on main page) -->
+                    <div id="quickActionsSection" class="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 rounded-2xl shadow-xl text-white relative overflow-hidden shimmer-bg">
                         <div class="absolute inset-0 overflow-hidden">
                             <div class="absolute -top-20 -right-20 w-40 h-40 bg-white opacity-10 rounded-full"></div>
                             <div class="absolute bottom-0 left-1/3 w-20 h-20 bg-white opacity-10 rounded-full"></div>
@@ -422,7 +448,8 @@ async function initializeMainApp() {
                         </div>
                     </div>
                     
-                    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-xl hover-card">
+                    <!-- Statistics Section (only on main page) -->
+                    <div id="statsSection" class="bg-white p-6 rounded-2xl border border-gray-100 shadow-xl hover-card">
                         <div class="flex justify-between items-center mb-5">
                             <h3 class="font-semibold text-gray-800 flex items-center">
                                 <div class="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 mr-2">
@@ -451,6 +478,110 @@ async function initializeMainApp() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Keyboard Shortcuts Section (only on main page) -->
+                    <div id="shortcutsSection" class="bg-white p-6 rounded-2xl border border-gray-100 shadow-xl hover-card">
+                        <div class="flex justify-between items-center mb-5">
+                            <h3 class="font-semibold text-gray-800 flex items-center">
+                                <div class="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 mr-2">
+                                    <i class="fas fa-keyboard text-sm text-amber-600"></i>
+                                </div>
+                                <span>Klavye Kısayolları</span>
+                            </h3>
+                            <span class="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-medium">Hızlı Erişim</span>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-200 rounded shadow-sm mr-3">F1</kbd>
+                                    <span class="text-sm text-gray-700">Barkod Tarama</span>
+                                </div>
+                                <i class="fas fa-barcode text-gray-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-200 rounded shadow-sm mr-3">F2</kbd>
+                                    <span class="text-sm text-gray-700">Ürün Listesi</span>
+                                </div>
+                                <i class="fas fa-boxes text-gray-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-200 rounded shadow-sm mr-3">F3</kbd>
+                                    <span class="text-sm text-gray-700">Satışlarım</span>
+                                </div>
+                                <i class="fas fa-receipt text-gray-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-200 rounded shadow-sm mr-3">F4</kbd>
+                                    <span class="text-sm text-gray-700">Yeni Ürün Ekle</span>
+                                </div>
+                                <i class="fas fa-plus-circle text-gray-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-200 rounded shadow-sm mr-3">F5</kbd>
+                                    <span class="text-sm text-gray-700">Gün Sonu Al</span>
+                                </div>
+                                <i class="fas fa-chart-bar text-gray-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-200 rounded shadow-sm mr-3">F10</kbd>
+                                    <span class="text-sm text-gray-700">Satışı Tamamla</span>
+                                </div>
+                                <i class="fas fa-check-circle text-gray-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-200 rounded shadow-sm mr-3">ESC</kbd>
+                                    <span class="text-sm text-gray-700">Ana Menü</span>
+                                </div>
+                                <i class="fas fa-home text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dynamic Content Area -->
+                    <div id="dynamicContent" class="min-h-96">
+                        <!-- Content will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Right Side - Cart (Always Visible) -->
+                <div class="w-full lg:w-1/3">
+                    <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 hover-card sticky top-6">
+                        <div class="flex justify-between items-center mb-5">
+                            <h2 class="text-xl font-semibold text-gray-700 flex items-center">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 mr-3">
+                                    <i class="fas fa-shopping-cart text-indigo-600"></i>
+                                </div>
+                                <span>Sepet</span>
+                            </h2>
+                            <span class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                                <i class="fas fa-tag mr-1"></i>
+                                Aktif Satış
+                            </span>
+                        </div>
+                        
+                        <div id="cartItems" class="divide-y divide-gray-100 max-h-64 overflow-auto mb-5 -mx-6 px-6">
+                            <!-- Cart items will be listed here -->
+                        </div>
+                        
+                        <div class="flex flex-col md:flex-row justify-between items-center pt-5 border-t border-gray-100">
+                            <div class="price-tag mb-4 md:mb-0 w-full md:w-auto text-center">
+                                <span class="text-xs uppercase tracking-wide opacity-80">Toplam Tutar</span>
+                                <div class="text-2xl font-bold"><span id="cartTotal">0.00</span> ₺</div>
+                            </div>
+                            
+                            <button onclick="completeSale()" 
+                                class="btn-animated bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-3 rounded-xl shadow-lg flex items-center justify-center w-full md:w-auto transition duration-300 transform hover:-translate-y-1">
+                                <i class="fas fa-check-circle mr-2 text-lg"></i>
+                                <span class="font-medium">Satışı Tamamla</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -483,6 +614,9 @@ async function initializeMainApp() {
 
     // Setup event listeners after content is loaded
     setupFormEventListeners();
+    
+    // Initialize cart display
+    updateCartDisplay();
     
     console.log("Ana menü başarıyla yüklendi.");
 }
@@ -566,15 +700,23 @@ function stopAutomaticStatsUpdates() {
     }
 }
 
-// Main menu display
-function showMainMenu() {
-    // Hide all main app sections
-    document.querySelectorAll('#mainApp > div').forEach(section => {
-        section.classList.add('hidden');
-    });
+// Show main menu
+async function showMainMenu() {
+    // Refresh statistics when returning to main menu
+    await loadStatistics();
     
-    // Show the main menu section
-    document.getElementById('mainMenu').classList.remove('hidden');
+    // Show main page sections
+    document.getElementById('barcodeSection').style.display = 'block';
+    document.getElementById('quickActionsSection').style.display = 'block';
+    document.getElementById('statsSection').style.display = 'block';
+    document.getElementById('shortcutsSection').style.display = 'block';
+    
+    // Clear dynamic content
+    document.getElementById('dynamicContent').innerHTML = '';
+    
+    // Otomatik input focus kaldırıldı
+    
+    console.log("Ana menüye dönüldü.");
 }
 
 // Logout function
@@ -604,15 +746,6 @@ function createMainMenuButton() {
     return button;
 }
 
-// Show main menu
-async function showMainMenu() {
-    // Refresh statistics when returning to main menu
-    await loadStatistics();
-    
-    // Ana sayfayı tekrar oluştur
-    await initializeMainApp();
-}
-
 // Show login page
 function showLoginPage() {
     document.getElementById('mainApp').classList.add('hidden');
@@ -627,95 +760,100 @@ function showLoginPage() {
 async function showProducts() {
     try {
         const products = await window.electronAPI.getProducts();
-        const mainContent = document.querySelector('#mainApp .flex-1');
         
-        mainContent.innerHTML = `
-            <div class="container mx-auto p-6">
-                <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-4">
-                        <div class="flex justify-between items-center">
-                            <h2 class="text-xl font-bold text-white flex items-center">
-                                <i class="fas fa-boxes mr-2"></i>
-                                Ürün Listesi
-                            </h2>
-                            <button onclick="showMainMenu()" class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition duration-200 flex items-center shadow-sm">
-                                <i class="fas fa-home mr-2"></i>
-                                Ana Menü
-                            </button>
+        // Hide main page sections
+        document.getElementById('barcodeSection').style.display = 'none';
+        document.getElementById('quickActionsSection').style.display = 'none';
+        document.getElementById('statsSection').style.display = 'none';
+        document.getElementById('shortcutsSection').style.display = 'none';
+        
+        // Load content into dynamic area
+        const dynamicContent = document.getElementById('dynamicContent');
+        dynamicContent.innerHTML = `
+            <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold text-white flex items-center">
+                            <i class="fas fa-boxes mr-2"></i>
+                            Ürün Listesi
+                        </h2>
+                        <button onclick="showMainMenu()" class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition duration-200 flex items-center shadow-sm">
+                            <i class="fas fa-home mr-2"></i>
+                            Ana Menü
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="mb-6 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
                         </div>
+                        <input type="text" id="productSearchInput" placeholder="Barkod ile ara..." 
+                            class="w-full pl-10 pr-4 py-3 border-2 border-indigo-100 focus:border-indigo-400 rounded-lg focus:outline-none transition-colors">
                     </div>
                     
-                    <div class="p-6">
-                        <div class="mb-6 relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-search text-gray-400"></i>
-                            </div>
-                            <input type="text" id="productSearchInput" placeholder="Barkod ile ara..." 
-                                class="w-full pl-10 pr-4 py-3 border-2 border-indigo-100 focus:border-indigo-400 rounded-lg focus:outline-none transition-colors">
-                        </div>
-                        
-                        <div class="overflow-x-auto rounded-lg border border-gray-200">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barkod</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürün Adı</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alış Fiyatı</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış Fiyatı</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                    <div class="overflow-x-auto rounded-lg border border-gray-200">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barkod</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürün Adı</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alış Fiyatı</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış Fiyatı</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTableBody" class="bg-white divide-y divide-gray-200">
+                                ${products.map(p => `
+                                    <tr class="hover:bg-gray-50 transition-colors" data-barkod="${p.barkod}" data-id="${p.id}">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-barcode text-gray-400 mr-2"></i>
+                                                <span class="font-medium text-gray-900">${p.barkod}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="text-sm font-medium text-gray-900">${p.urunAdi}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-500">${p.alisFiyati.toFixed(2)} TL</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="font-medium text-indigo-600">
+                                                ${p.satisFiyati.toFixed(2)} TL
+                                                ${p.indirim > 0 ? 
+                                                    `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${p.indirim} İndirim</span>
+                                                    <div class="text-sm text-red-500">İndirimli: ${(p.satisFiyati * (1 - p.indirim/100)).toFixed(2)} TL</div>` 
+                                                : ''}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            ${p.stokMiktari > 10 
+                                            ? `<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">${p.stokMiktari} adet</span>` 
+                                            : p.stokMiktari > 3 
+                                            ? `<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">${p.stokMiktari} adet</span>` 
+                                            : `<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">${p.stokMiktari} adet</span>`}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <div class="flex justify-end space-x-2">
+                                                <button onclick="editProduct(${p.id})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex">
+                                                    <i class="fas fa-edit"></i>
+                                                    <span>Düzenle</span>
+                                                </button>
+                                                <button onclick="deleteProduct(${p.id})" 
+                                                    class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                                                    title="Bu ürünü sil">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                    <span>Sil</span>
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody id="productTableBody" class="bg-white divide-y divide-gray-200">
-                                    ${products.map(p => `
-                                        <tr class="hover:bg-gray-50 transition-colors" data-barkod="${p.barkod}" data-id="${p.id}">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="flex items-center">
-                                                    <i class="fas fa-barcode text-gray-400 mr-2"></i>
-                                                    <span class="font-medium text-gray-900">${p.barkod}</span>
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4">
-                                                <div class="text-sm font-medium text-gray-900">${p.urunAdi}</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="text-sm text-gray-500">${p.alisFiyati.toFixed(2)} TL</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="font-medium text-indigo-600">
-                                                    ${p.satisFiyati.toFixed(2)} TL
-                                                    ${p.indirim > 0 ? 
-                                                        `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${p.indirim} İndirim</span>
-                                                        <div class="text-sm text-red-500">İndirimli: ${(p.satisFiyati * (1 - p.indirim/100)).toFixed(2)} TL</div>` 
-                                                    : ''}
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                ${p.stokMiktari > 10 
-                                                ? `<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">${p.stokMiktari} adet</span>` 
-                                                : p.stokMiktari > 3 
-                                                ? `<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">${p.stokMiktari} adet</span>` 
-                                                : `<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">${p.stokMiktari} adet</span>`}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div class="flex justify-end space-x-2">
-                                                    <button onclick="editProduct(${p.id})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex">
-                                                        <i class="fas fa-edit"></i>
-                                                        <span>Düzenle</span>
-                                                    </button>
-                                                    <button onclick="deleteProduct(${p.id})" 
-                                                        class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
-                                                        title="Bu ürünü sil">
-                                                        <i class="fas fa-trash-alt"></i>
-                                                        <span>Sil</span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -727,6 +865,7 @@ async function showProducts() {
         // After rendering the product list, set up the search functionality
         setTimeout(() => {
             setupProductSearch();
+            // Otomatik input focus kaldırıldı, kısayollar her zaman çalışacak
         }, 100);
     } catch (error) {
         console.error('Show products error:', error);
@@ -753,96 +892,100 @@ function setupProductSearch() {
         });
     });
 
-    // Focus the search input when the page loads
-    searchInput.focus();
+    // Otomatik input focus kaldırıldı, kısayollar her zaman çalışacak
 }
 
 // Show sales page
 async function showSales() {
     try {
         const sales = await window.electronAPI.getSales(currentUser.id);
-        const mainContent = document.querySelector('#mainApp .flex-1');
         
-        mainContent.innerHTML = `
-            <div class="w-full max-w-6xl mx-auto">
-                <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
-                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
-                        <div class="flex justify-between items-center">
-                            <h2 class="text-2xl font-bold text-white flex items-center">
-                                <i class="fas fa-receipt mr-3"></i>
-                                Satış Geçmişi
-                            </h2>
-                            <button onclick="showMainMenu()" class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition duration-200 flex items-center shadow-sm">
-                                <i class="fas fa-home mr-2"></i>
-                                Ana Menü
-                            </button>
+        // Hide main page sections
+        document.getElementById('barcodeSection').style.display = 'none';
+        document.getElementById('quickActionsSection').style.display = 'none';
+        document.getElementById('statsSection').style.display = 'none';
+        document.getElementById('shortcutsSection').style.display = 'none';
+        
+        // Load content into dynamic area
+        const dynamicContent = document.getElementById('dynamicContent');
+        dynamicContent.innerHTML = `
+            <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-white flex items-center">
+                            <i class="fas fa-receipt mr-3"></i>
+                            Satış Geçmişi
+                        </h2>
+                        <button onclick="showMainMenu()" class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition duration-200 flex items-center shadow-sm">
+                            <i class="fas fa-home mr-2"></i>
+                            Ana Menü
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    ${sales.length === 0 ? `
+                        <div class="text-center py-12">
+                            <div class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
+                                <i class="fas fa-receipt text-gray-400 text-2xl"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Henüz Satış Yok</h3>
+                            <p class="text-gray-500">İlk satışınızı yapmak için ana menüye dönün ve ürün taramaya başlayın.</p>
                         </div>
-                    </div>
-                    
-                    <div class="p-6">
-                        ${sales.length === 0 ? `
-                            <div class="text-center py-12">
-                                <div class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
-                                    <i class="fas fa-receipt text-gray-400 text-2xl"></i>
-                                </div>
-                                <h3 class="text-lg font-medium text-gray-900 mb-2">Henüz Satış Yok</h3>
-                                <p class="text-gray-500">İlk satışınızı yapmak için ana menüye dönün ve ürün taramaya başlayın.</p>
-                            </div>
-                        ` : `
-                            <div class="overflow-x-auto rounded-lg border border-gray-200">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış No</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürünler</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam Tutar</th>
-                                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                    ` : `
+                        <div class="overflow-x-auto rounded-lg border border-gray-200">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış No</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürünler</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam Tutar</th>
+                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${sales.map(s => `
+                                        <tr class="hover:bg-gray-50 transition-colors">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    ${new Date(s.tarih).toLocaleDateString('tr-TR')}
+                                                </div>
+                                                <div class="text-sm text-gray-500">
+                                                    ${new Date(s.tarih).toLocaleTimeString('tr-TR')}
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                    #${s.id}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900 max-w-xs truncate" title="${s.urunler}">
+                                                    ${s.urunler}
+                                                </div>
+                                                <div class="text-sm text-gray-500">
+                                                    ${s.urunSayisi} ürün
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-lg font-bold text-green-600">
+                                                    ${s.toplamTutar.toFixed(2)} TL
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                                <button onclick="deleteSale(${s.id})" 
+                                                    class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                                                    <i class="fas fa-trash-alt mr-1"></i>
+                                                    Sil
+                                                </button>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        ${sales.map(s => `
-                                            <tr class="hover:bg-gray-50 transition-colors">
-                                                <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="text-sm font-medium text-gray-900">
-                                                        ${new Date(s.tarih).toLocaleDateString('tr-TR')}
-                                                    </div>
-                                                    <div class="text-sm text-gray-500">
-                                                        ${new Date(s.tarih).toLocaleTimeString('tr-TR')}
-                                                    </div>
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap">
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                                        #${s.id}
-                                                    </span>
-                                                </td>
-                                                <td class="px-6 py-4">
-                                                    <div class="text-sm text-gray-900 max-w-xs truncate" title="${s.urunler}">
-                                                        ${s.urunler}
-                                                    </div>
-                                                    <div class="text-sm text-gray-500">
-                                                        ${s.urunSayisi} ürün
-                                                    </div>
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="text-lg font-bold text-green-600">
-                                                        ${s.toplamTutar.toFixed(2)} TL
-                                                    </div>
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                    <button onclick="deleteSale(${s.id})" 
-                                                        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
-                                                        <i class="fas fa-trash-alt mr-1"></i>
-                                                        Sil
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        `}
-                    </div>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
                 </div>
             </div>
         `;
@@ -857,43 +1000,54 @@ async function showSales() {
 
 // Add new product
 function addProduct() {
-    const mainContent = document.querySelector('#mainApp .flex-1');
+    // Hide main page sections
+    document.getElementById('barcodeSection').style.display = 'none';
+    document.getElementById('quickActionsSection').style.display = 'none';
+    document.getElementById('statsSection').style.display = 'none';
+    document.getElementById('shortcutsSection').style.display = 'none';
     
-    mainContent.innerHTML = `
+    // Load content into dynamic area
+    const dynamicContent = document.getElementById('dynamicContent');
+    dynamicContent.innerHTML = `
         <div class="w-full max-w-md mx-auto">
-            <div class="bg-white p-4 rounded-lg shadow">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">Yeni Ürün Ekle</h2>
-                    <button onclick="showMainMenu()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+            <div class="bg-white p-6 rounded-xl shadow-xl border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-plus-circle mr-2 text-green-600"></i>
+                        Yeni Ürün Ekle
+                    </h2>
+                    <button onclick="showMainMenu()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200 flex items-center">
+                        <i class="fas fa-home mr-2"></i>
                         Ana Menü
                     </button>
                 </div>
                 <form id="addProductForm" class="space-y-4">
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">Barkod</label>
-                        <input type="text" id="newBarkod" class="w-full px-3 py-2 border rounded-lg">
+                        <input type="text" id="newBarkod" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">Ürün Adı</label>
-                        <input type="text" id="newUrunAdi" class="w-full px-3 py-2 border rounded-lg">
+                        <input type="text" id="newUrunAdi" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">Alış Fiyatı</label>
-                        <input type="number" step="0.01" id="newAlisFiyati" class="w-full px-3 py-2 border rounded-lg">
+                        <input type="number" step="0.01" id="newAlisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">Satış Fiyatı</label>
-                        <input type="number" step="0.01" id="newSatisFiyati" class="w-full px-3 py-2 border rounded-lg">
+                        <input type="number" step="0.01" id="newSatisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">Stok Miktarı</label>
-                        <input type="number" id="newStokMiktari" class="w-full px-3 py-2 border rounded-lg">
+                        <input type="number" id="newStokMiktari" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">İndirim (%)</label>
-                        <input type="number" step="0.01" id="newIndirim" class="w-full px-3 py-2 border rounded-lg" min="0" max="100" value="0">
+                        <input type="number" step="0.01" id="newIndirim" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" min="0" max="100" value="0">
                     </div>
-                    <button type="submit" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600">
+                    <button type="submit" class="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition duration-200 font-medium">
+                        <i class="fas fa-plus mr-2"></i>
                         Ürün Ekle
                     </button>
                 </form>
@@ -908,6 +1062,7 @@ function addProduct() {
     setTimeout(() => {
         setupEnterKeyNavigation('addProductForm');
         document.dispatchEvent(new Event('addProductPageShown'));
+        // Otomatik input focus kaldırıldı, kısayollar her zaman çalışacak
     }, 100);
 }
 
@@ -915,9 +1070,15 @@ function addProduct() {
 async function getDailyReport() {
     try {
         const report = await window.electronAPI.getDailyReport();
-        const mainContent = document.querySelector('#mainApp .flex-1');
         
-        mainContent.innerHTML = `
+        // Hide main page sections
+        document.getElementById('barcodeSection').style.display = 'none';
+        document.getElementById('quickActionsSection').style.display = 'none';
+        document.getElementById('statsSection').style.display = 'none';
+        
+        // Load content into dynamic area
+        const dynamicContent = document.getElementById('dynamicContent');
+        dynamicContent.innerHTML = `
             <div class="w-full max-w-3xl mx-auto">
                 <div class="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
                     <div class="flex justify-between items-center mb-8">
@@ -1167,6 +1328,8 @@ async function completeSale() {
             
             // Refresh statistics after sale is completed
             await loadStatistics();
+            
+            // Don't focus barcode input after successful sale completion
         }
     } catch (error) {
         console.error('Sale error:', error);
@@ -1183,14 +1346,23 @@ async function editProduct(id) {
             return;
         }
         
-        const mainContent = document.querySelector('#mainApp .flex-1');
+        // Hide main page sections
+        document.getElementById('barcodeSection').style.display = 'none';
+        document.getElementById('quickActionsSection').style.display = 'none';
+        document.getElementById('statsSection').style.display = 'none';
         
-        mainContent.innerHTML = `
+        // Load content into dynamic area
+        const dynamicContent = document.getElementById('dynamicContent');
+        dynamicContent.innerHTML = `
             <div class="w-full max-w-md mx-auto">
-                <div class="bg-white p-4 rounded-lg shadow">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold">Ürün Düzenle</h2>
-                        <button onclick="showProducts()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <div class="bg-white p-6 rounded-xl shadow-xl border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-edit mr-2 text-blue-600"></i>
+                            Ürün Düzenle
+                        </h2>
+                        <button onclick="showProducts()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200 flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i>
                             Geri
                         </button>
                     </div>
@@ -1198,29 +1370,30 @@ async function editProduct(id) {
                         <input type="hidden" id="editProductId" value="${product.id}">
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Barkod</label>
-                            <input type="text" id="editBarkod" class="w-full px-3 py-2 border rounded-lg" value="${product.barkod}">
+                            <input type="text" id="editBarkod" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.barkod}">
                         </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Ürün Adı</label>
-                            <input type="text" id="editUrunAdi" class="w-full px-3 py-2 border rounded-lg" value="${product.urunAdi}">
+                            <input type="text" id="editUrunAdi" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.urunAdi}">
                         </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Alış Fiyatı</label>
-                            <input type="number" step="0.01" id="editAlisFiyati" class="w-full px-3 py-2 border rounded-lg" value="${product.alisFiyati}">
+                            <input type="number" step="0.01" id="editAlisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.alisFiyati}">
                         </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Satış Fiyatı</label>
-                            <input type="number" step="0.01" id="editSatisFiyati" class="w-full px-3 py-2 border rounded-lg" value="${product.satisFiyati}">
+                            <input type="number" step="0.01" id="editSatisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.satisFiyati}">
                         </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Stok Miktarı</label>
-                            <input type="number" id="editStokMiktari" class="w-full px-3 py-2 border rounded-lg" value="${product.stokMiktari}">
+                            <input type="number" id="editStokMiktari" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.stokMiktari}">
                         </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">İndirim (%)</label>
-                            <input type="number" step="0.01" id="editIndirim" class="w-full px-3 py-2 border rounded-lg" value="${product.indirim || 0}" min="0" max="100">
+                            <input type="number" step="0.01" id="editIndirim" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.indirim || 0}" min="0" max="100">
                         </div>
-                        <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">
+                        <button type="submit" class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition duration-200 font-medium">
+                            <i class="fas fa-save mr-2"></i>
                             Kaydet
                         </button>
                     </form>
@@ -1280,14 +1453,104 @@ async function deleteProduct(id) {
             return;
         }
         
-        // Show detailed confirmation dialog
-        const confirmMessage = `"${product.urunAdi}" ürününü silmek istediğinizden emin misiniz?\n\nÜrün Detayları:\n• Barkod: ${product.barkod}\n• Ürün Adı: ${product.urunAdi}\n• Stok: ${product.stokMiktari} adet\n• Satış Fiyatı: ${product.satisFiyati.toFixed(2)} TL\n\nBu işlem geri alınamaz!`;
+        // Show modern confirmation modal
+        showDeleteProductModal(product);
+    } catch (error) {
+        console.error('Delete product error:', error);
+        showNotification('Ürün silinirken bir hata oluştu!', 'error');
+    }
+}
+
+// Show modern delete product confirmation modal
+function showDeleteProductModal(product) {
+    // Create modal HTML
+    const modalHTML = `
+        <div id="deleteProductModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+                <div class="p-6">
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
+                            <i class="fas fa-exclamation-triangle text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Ürünü Sil</h3>
+                        <p class="text-gray-600">Bu ürünü silmek istediğinizden emin misiniz?</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-sm font-medium text-gray-600">Ürün Adı:</span>
+                                <span class="text-sm text-gray-900">${product.urunAdi}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm font-medium text-gray-600">Barkod:</span>
+                                <span class="text-sm text-gray-900">${product.barkod}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm font-medium text-gray-600">Stok:</span>
+                                <span class="text-sm text-gray-900">${product.stokMiktari} adet</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm font-medium text-gray-600">Satış Fiyatı:</span>
+                                <span class="text-sm text-gray-900">${product.satisFiyati.toFixed(2)} TL</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center mb-6">
+                        <input type="checkbox" id="confirmDeleteCheckbox" class="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2">
+                        <label for="confirmDeleteCheckbox" class="ml-2 text-sm text-gray-700">
+                            Bu ürünü silmek istediğimi onaylıyorum
+                        </label>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button onclick="hideDeleteProductModal()" 
+                            class="flex-1 py-3 px-4 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <i class="fas fa-times mr-2"></i>
+                            Vazgeç
+                        </button>
+                        <button id="confirmDeleteBtn" onclick="confirmDeleteProduct(${product.id})" 
+                            class="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled>
+                            <i class="fas fa-trash-alt mr-2"></i>
+                            Sil
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Setup checkbox event listener
+    const checkbox = document.getElementById('confirmDeleteCheckbox');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    
+    checkbox.addEventListener('change', function() {
+        confirmBtn.disabled = !this.checked;
+    });
+    
+    // Focus checkbox
+    checkbox.focus();
+}
+
+// Hide delete product modal
+function hideDeleteProductModal() {
+    const modal = document.getElementById('deleteProductModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Confirm delete product
+async function confirmDeleteProduct(productId) {
+    try {
+        const result = await window.electronAPI.deleteProduct(productId);
         
-        if (!confirm(confirmMessage)) {
-            return;
-        }
-        
-        const result = await window.electronAPI.deleteProduct(id);
+        hideDeleteProductModal();
         
         if (result.success) {
             showNotification(result.message, 'success');
@@ -1299,6 +1562,7 @@ async function deleteProduct(id) {
     } catch (error) {
         console.error('Delete product error:', error);
         showNotification('Ürün silinirken bir hata oluştu!', 'error');
+        hideDeleteProductModal();
     }
 }
 
@@ -1336,6 +1600,7 @@ async function handleBarcodeInput(e) {
         
         if (barcode === '') {
             showNotification('Lütfen bir barkod girin!', 'error');
+            barcodeInput.focus();
             return;
         }
         
@@ -1371,6 +1636,8 @@ async function handleBarcodeInput(e) {
                     // Check if adding more would exceed stock
                     if (cart[existingIndex].miktar + 1 > product.stokMiktari) {
                         showNotification(`Yetersiz stok! ${product.urunAdi} için sadece ${product.stokMiktari} adet stok mevcut.`, 'error');
+                        barcodeInput.value = '';
+                        barcodeInput.focus();
                         return;
                     }
                     
@@ -1403,15 +1670,19 @@ async function handleBarcodeInput(e) {
                 // Update the cart display
                 updateCartDisplay();
                 
-                // Clear the input field for next barcode
+                // Clear the input field for next barcode and explicitly blur to prevent focus
                 barcodeInput.value = '';
-                barcodeInput.focus();
+                barcodeInput.blur();
             } else {
                 showNotification('Ürün bulunamadı!', 'error');
+                barcodeInput.value = '';
+                barcodeInput.focus();
             }
         } catch (error) {
             console.error('Search product error:', error);
             showNotification('Ürün aranırken bir hata oluştu!', 'error');
+            barcodeInput.value = '';
+            barcodeInput.focus();
         }
     }
 }

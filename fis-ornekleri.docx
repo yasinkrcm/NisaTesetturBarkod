@@ -1,0 +1,108 @@
+NİSA TESETTÜR - FİŞ ÖRNEKLERİ
+
+================================================================================
+SATIŞ FİŞİ ÖRNEĞİ
+================================================================================
+
+NİSA TESETTÜR
+05.01.2025 14:30:25
+Satış No: 1
+
+DENEME x2                   200.00 TL
+TESETTÜR ELBİSE x1         150.00 TL
+HİJAB x3                    75.00 TL
+
+Toplam: 425.00 TL
+
+Bizi tercih ettiğiniz için teşekkürler!
+
+================================================================================
+GÜN SONU RAPORU ÖRNEĞİ
+================================================================================
+
+NİSA TESETTÜR
+GÜN SONU RAPORU
+05.01.2025
+
+Toplam Satış Sayısı: 15
+Toplam Ciro: 2,450.75 TL
+Toplam Kar: 735.25 TL
+
+Rapor 05.01.2025 23:59:45 tarihinde oluşturulmuştur.
+
+================================================================================
+FİŞ FORMATI DETAYLARI
+================================================================================
+
+Satış Fişi Özellikleri:
+- Mağaza adı ve logo
+- Tarih ve saat
+- Satış numarası
+- Ürün listesi (adet ve fiyat)
+- Toplam tutar
+- Teşekkür mesajı
+- 300px genişlik (termal yazıcı için optimize)
+
+Gün Sonu Raporu Özellikleri:
+- Mağaza adı ve başlık
+- Tarih bilgisi
+- Toplam satış sayısı
+- Toplam ciro
+- Toplam kar
+- Rapor oluşturma tarihi
+- 400px genişlik
+
+Yazdırma Özellikleri:
+- Courier New font (termal yazıcı uyumlu)
+- Otomatik yazdırma dialog'u
+- Arka plan yazdırma desteği
+- Responsive tasarım
+
+================================================================================
+KLASÖR YAPISI
+================================================================================
+
+NisaTesetturBarkod/
+├── main.js (Ana uygulama)
+├── renderer.js (Kullanıcı arayüzü)
+├── preload.js (API bağlantıları)
+├── index.html (Ana sayfa)
+├── database.json (Veritabanı)
+├── package.json (Proje ayarları)
+└── fis-ornekleri.docx (Bu dosya)
+
+================================================================================
+TEKNİK DETAYLAR
+================================================================================
+
+Yazdırma Fonksiyonları:
+- printSaleReceipt: Satış fişi yazdırma
+- printEndOfDayReport: Gün sonu raporu yazdırma
+- Electron BrowserWindow ile gizli pencere
+- HTML to PDF dönüşümü
+- Otomatik yazdırma dialog'u
+
+Veritabanı Yapısı:
+- kullanicilar: Kullanıcı bilgileri
+- urunler: Ürün bilgileri
+- satislar: Satış kayıtları
+- satisDetay: Satış detayları
+
+Güvenlik Özellikleri:
+- Ürün silme onayı (checkbox ile)
+- Satış silme onayı
+- Stok kontrolü
+- Hata yönetimi
+
+================================================================================
+SONUÇ
+================================================================================
+
+Bu uygulama modern bir barkod sistemi olup, 
+satış yönetimi, stok takibi ve raporlama 
+özelliklerini içermektedir.
+
+Yazdırma fonksiyonları termal yazıcılar ile 
+uyumlu olacak şekilde tasarlanmıştır.
+
+© 2025 Nisa Tesettür Barkod Sistemi 
