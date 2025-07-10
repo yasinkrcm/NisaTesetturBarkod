@@ -1100,7 +1100,7 @@ async function getDailyReport() {
                                 <i class="fas fa-shopping-bag text-2xl"></i>
                             </div>
                             <h3 class="text-lg font-semibold mb-2 text-blue-800">Toplam Satış</h3>
-                            <p class="text-4xl font-bold text-blue-600">${report.toplamSatis}</p>
+                            <p class="text-4xl font-bold text-blue-600">${report.toplamSatis || 0}</p>
                         </div>
                         
                         <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl text-center border border-green-200 shadow-sm hover-card">

@@ -2,9 +2,41 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
+const fs = require('fs');
 
 const adapter = new FileSync('database.json');
 const db = low(adapter);
+
+// Uygulama başlarken database.json dosyasının otomatik yedeğini al
+const dbPath = path.join(__dirname, 'database.json');
+const backupPath = path.join(__dirname, 'database_backup.json');
+
+if (fs.existsSync(dbPath) && !fs.existsSync(backupPath)) {
+    fs.copyFileSync(dbPath, backupPath);
+}
+
+// Otomatik kurtarma: database.json sıfırlandıysa veya bozulduysa yedekten geri yükle
+if (fs.existsSync(backupPath) && fs.existsSync(dbPath)) {
+    try {
+        const dbContent = fs.readFileSync(dbPath, 'utf-8');
+        const parsed = JSON.parse(dbContent);
+        // Eğer ürünler, satışlar ve detaylar boşsa, sıfırlanmış demektir
+        if (
+            Array.isArray(parsed.urunler) && parsed.urunler.length === 0 &&
+            Array.isArray(parsed.satislar) && parsed.satislar.length === 0 &&
+            Array.isArray(parsed.satisDetay) && parsed.satisDetay.length === 0 &&
+            parsed.kullanicilar && parsed.kullanicilar.length === 1 &&
+            parsed.kullanicilar[0].kullaniciAdi === 'SametAslan'
+        ) {
+            fs.copyFileSync(backupPath, dbPath);
+            console.log('database.json sıfırlandığı için yedekten geri yüklendi.');
+        }
+    } catch (e) {
+        // Dosya bozuksa da yedekten geri yükle
+        fs.copyFileSync(backupPath, dbPath);
+        console.log('database.json bozuk olduğu için yedekten geri yüklendi.');
+    }
+}
 
 // Set default data
 db.defaults({
@@ -399,10 +431,10 @@ ipcMain.handle('printSaleReceipt', (event, saleData) => {
             <style>
                 body {
                     font-family: 'Courier New', monospace;
-                    font-size: 12px;
+                    font-size: 30px;
                     margin: 0;
-                    padding: 20px;
-                    width: 300px;
+                    padding: 50px;
+                    width: 750px;
                 }
                 .header {
                     text-align: center;
@@ -578,15 +610,15 @@ ipcMain.handle('printEndOfDayReport', (event, reportData) => {
             <div class="stats">
                 <div class="stat-row">
                     <span class="stat-label">Toplam Satış Sayısı:</span>
-                    <span class="stat-value">${reportData.toplamSatis}</span>
+                    <span class="stat-value">${typeof reportData.toplamSatis === 'number' ? reportData.toplamSatis : (Number(reportData.toplamSatis) || 0)}</span>
                 </div>
                 <div class="stat-row">
                     <span class="stat-label">Toplam Ciro:</span>
-                    <span class="stat-value">${reportData.toplamCiro.toFixed(2)} TL</span>
+                    <span class="stat-value">${typeof reportData.toplamCiro === 'number' ? reportData.toplamCiro.toFixed(2) : (Number(reportData.toplamCiro) || 0).toFixed(2)} TL</span>
                 </div>
                 <div class="stat-row">
                     <span class="stat-label">Toplam Kar:</span>
-                    <span class="stat-value">${reportData.toplamKar.toFixed(2)} TL</span>
+                    <span class="stat-value">${typeof reportData.toplamKar === 'number' ? reportData.toplamKar.toFixed(2) : (Number(reportData.toplamKar) || 0).toFixed(2)} TL</span>
                 </div>
             </div>
             
