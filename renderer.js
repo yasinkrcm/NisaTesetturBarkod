@@ -128,6 +128,13 @@ document.addEventListener('keydown', (e) => {
             showNotification('Gün sonu raporu açıldı (F5)', 'info');
             break;
             
+        case 'F6':
+            e.preventDefault();
+            // Go to barcode generator
+            showBarcodeGenerator();
+            showNotification('Barkod üretici açıldı (F6)', 'info');
+            break;
+            
         case 'F10':
             e.preventDefault();
             // Complete sale
@@ -210,6 +217,8 @@ function initializeFormHandlers() {
             const product = {
                 barkod: document.getElementById('newBarkod').value,
                 urunAdi: document.getElementById('newUrunAdi').value,
+                kategori: document.getElementById('newKategori').value,
+                beden: document.getElementById('newBeden').value,
                 alisFiyati: parseFloat(document.getElementById('newAlisFiyati').value),
                 satisFiyati: parseFloat(document.getElementById('newSatisFiyati').value),
                 stokMiktari: parseInt(document.getElementById('newStokMiktari').value),
@@ -248,9 +257,12 @@ function setupFormEventListeners() {
             const product = {
                 barkod: document.getElementById('newBarkod').value,
                 urunAdi: document.getElementById('newUrunAdi').value,
+                kategori: document.getElementById('newKategori').value,
+                beden: document.getElementById('newBeden').value,
                 alisFiyati: parseFloat(document.getElementById('newAlisFiyati').value),
                 satisFiyati: parseFloat(document.getElementById('newSatisFiyati').value),
-                stokMiktari: parseInt(document.getElementById('newStokMiktari').value)
+                stokMiktari: parseInt(document.getElementById('newStokMiktari').value),
+                indirim: parseFloat(document.getElementById('newIndirim').value || 0)
             };
 
             try {
@@ -435,6 +447,17 @@ async function initializeMainApp() {
                                 <i class="fas fa-chevron-right"></i>
                             </button>
                             
+                            <button onclick="showBarcodeGenerator()" 
+                                class="flex items-center justify-between px-5 py-4 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-xl backdrop-filter backdrop-blur-sm border border-white border-opacity-20 transition duration-300 transform hover:-translate-y-1">
+                                <span class="flex items-center">
+                                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-500 bg-opacity-80 mr-3 shadow">
+                                        <i class="fas fa-qrcode text-white"></i>
+                                    </div>
+                                    <span class="font-medium">Barkod Üret</span>
+                                </span>
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            
                             <button onclick="getDailyReport()" 
                                 class="flex items-center justify-between px-5 py-4 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-xl backdrop-filter backdrop-blur-sm border border-white border-opacity-20 transition duration-300 transform hover:-translate-y-1">
                                 <span class="flex items-center">
@@ -527,6 +550,13 @@ async function initializeMainApp() {
                                     <span class="text-sm text-gray-700">Gün Sonu Al</span>
                                 </div>
                                 <i class="fas fa-chart-bar text-gray-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <kbd class="px-2 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-200 rounded shadow-sm mr-3">F6</kbd>
+                                    <span class="text-sm text-gray-700">Barkod Üret</span>
+                                </div>
+                                <i class="fas fa-qrcode text-gray-400"></i>
                             </div>
                             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div class="flex items-center">
@@ -799,6 +829,8 @@ async function showProducts() {
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barkod</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürün Adı</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Beden</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alış Fiyatı</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış Fiyatı</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
@@ -816,6 +848,14 @@ async function showProducts() {
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="text-sm font-medium text-gray-900">${p.urunAdi}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-700">
+                                                ${p.kategori ? `<span class="px-2 py-1 text-xs rounded-full ${p.kategori === 'Kıyafet' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${p.kategori}</span>` : '<span class="text-gray-400">-</span>'}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-700">${p.beden || '<span class="text-gray-400">-</span>'}</div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm text-gray-500">${p.alisFiyati.toFixed(2)} TL</div>
@@ -1029,6 +1069,18 @@ function addProduct() {
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">Ürün Adı</label>
                         <input type="text" id="newUrunAdi" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Kategori</label>
+                        <select id="newKategori" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
+                            <option value="">Seçiniz...</option>
+                            <option value="Kıyafet">Kıyafet</option>
+                            <option value="Ev Tekstili">Ev Tekstili</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Beden (Opsiyonel)</label>
+                        <input type="text" id="newBeden" placeholder="S, M, L, XL..." class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">Alış Fiyatı</label>
@@ -1377,6 +1429,18 @@ async function editProduct(id) {
                             <input type="text" id="editUrunAdi" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.urunAdi}">
                         </div>
                         <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Kategori</label>
+                            <select id="editKategori" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
+                                <option value="">Seçiniz...</option>
+                                <option value="Kıyafet" ${product.kategori === 'Kıyafet' ? 'selected' : ''}>Kıyafet</option>
+                                <option value="Ev Tekstili" ${product.kategori === 'Ev Tekstili' ? 'selected' : ''}>Ev Tekstili</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Beden (Opsiyonel)</label>
+                            <input type="text" id="editBeden" placeholder="S, M, L, XL..." class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.beden || ''}">
+                        </div>
+                        <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Alış Fiyatı</label>
                             <input type="number" step="0.01" id="editAlisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.alisFiyati}">
                         </div>
@@ -1415,6 +1479,8 @@ async function editProduct(id) {
                         id: parseInt(document.getElementById('editProductId').value),
                         barkod: document.getElementById('editBarkod').value,
                         urunAdi: document.getElementById('editUrunAdi').value,
+                        kategori: document.getElementById('editKategori').value,
+                        beden: document.getElementById('editBeden').value,
                         alisFiyati: parseFloat(document.getElementById('editAlisFiyati').value),
                         satisFiyati: parseFloat(document.getElementById('editSatisFiyati').value),
                         stokMiktari: parseInt(document.getElementById('editStokMiktari').value),
@@ -1807,3 +1873,417 @@ async function printCurrentDailyReport() {
         showNotification('Rapor yazdırılırken bir hata oluştu!', 'error');
     }
 }
+
+// ============ BARKOD ÜRETME SİSTEMİ ============
+
+// Barkod üretici modal'ı göster
+function showBarcodeGenerator() {
+    // Hide main page sections
+    document.getElementById('barcodeSection').style.display = 'none';
+    document.getElementById('quickActionsSection').style.display = 'none';
+    document.getElementById('statsSection').style.display = 'none';
+    document.getElementById('shortcutsSection').style.display = 'none';
+    
+    const dynamicContent = document.getElementById('dynamicContent');
+    dynamicContent.innerHTML = `
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-white flex items-center">
+                        <i class="fas fa-qrcode mr-2"></i>
+                        Barkod Üretim Sistemi
+                    </h2>
+                    <button onclick="showMainMenu()" class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition duration-200 flex items-center shadow-sm">
+                        <i class="fas fa-home mr-2"></i>
+                        Ana Menü
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <!-- Seçim Butonları -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <button onclick="selectBarcodeMode('new')" 
+                        class="p-6 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 border-2 border-green-300 rounded-xl transition-all transform hover:scale-105 shadow-md">
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-3 shadow-lg">
+                                <i class="fas fa-plus text-white text-2xl"></i>
+                            </div>
+                            <h3 class="font-bold text-lg text-green-800">Yeni Ürün Ekle</h3>
+                            <p class="text-sm text-green-600 mt-2">Yeni ürün kaydı oluştur ve barkod üret</p>
+                        </div>
+                    </button>
+                    
+                    <button onclick="selectBarcodeMode('existing')" 
+                        class="p-6 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-blue-300 rounded-xl transition-all transform hover:scale-105 shadow-md">
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mb-3 shadow-lg">
+                                <i class="fas fa-box text-white text-2xl"></i>
+                            </div>
+                            <h3 class="font-bold text-lg text-blue-800">Mevcut Ürüne Barkod Ekle</h3>
+                            <p class="text-sm text-blue-600 mt-2">Var olan bir ürün için yeni barkod üret</p>
+                        </div>
+                    </button>
+                </div>
+                
+                <!-- Form Alanı -->
+                <div id="barcodeFormArea" class="hidden">
+                    <!-- Form buraya yüklenecek -->
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Barkod modu seçimi
+async function selectBarcodeMode(mode) {
+    const formArea = document.getElementById('barcodeFormArea');
+    formArea.classList.remove('hidden');
+    
+    if (mode === 'new') {
+        formArea.innerHTML = `
+            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-edit mr-2 text-green-600"></i>
+                    Yeni Ürün Bilgileri
+                </h3>
+                
+                <form id="newProductBarcodeForm" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Ürün Adı *</label>
+                            <input type="text" id="barcodeUrunAdi" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Kategori *</label>
+                            <select id="barcodeKategori" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="">Seçiniz...</option>
+                                <option value="Kıyafet">Kıyafet</option>
+                                <option value="Ev Tekstili">Ev Tekstili</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Alış Fiyatı (TL) *</label>
+                            <input type="number" id="barcodeAlisFiyati" step="0.01" min="0" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Satış Fiyatı (TL) *</label>
+                            <input type="number" id="barcodeSatisFiyati" step="0.01" min="0" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Stok Miktarı *</label>
+                            <input type="number" id="barcodeStokMiktari" min="1" value="1" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">İndirim (%)</label>
+                            <input type="number" id="barcodeIndirim" min="0" max="100" value="0" step="0.1"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Beden (Opsiyonel)</label>
+                            <input type="text" id="barcodeBeden" placeholder="S, M, L, XL..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Barkod Adedi *</label>
+                            <input type="number" id="barcodeAdet" min="1" value="1" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" onclick="showBarcodeGenerator()" 
+                            class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">
+                            <i class="fas fa-times mr-2"></i>İptal
+                        </button>
+                        <button type="submit" 
+                            class="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition shadow-md">
+                            <i class="fas fa-qrcode mr-2"></i>Barkod Üret
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.getElementById('newProductBarcodeForm').addEventListener('submit', handleNewProductBarcode);
+        
+    } else if (mode === 'existing') {
+        const products = await window.electronAPI.getProducts();
+        
+        formArea.innerHTML = `
+            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-box mr-2 text-blue-600"></i>
+                    Mevcut Ürün Seçimi
+                </h3>
+                
+                <form id="existingProductBarcodeForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ürün Seçin *</label>
+                        <select id="existingProductSelect" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Ürün seçiniz...</option>
+                            ${products.map(p => `
+                                <option value="${p.id}">${p.urunAdi} - ${p.barkod} (Stok: ${p.stokMiktari})</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    
+                    <div id="existingProductDetails" class="hidden">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Beden (Opsiyonel)</label>
+                                <input type="text" id="existingBarcodeBeden" placeholder="S, M, L, XL..."
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Barkod Adedi *</label>
+                                <input type="number" id="existingBarcodeAdet" min="1" value="1" required
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" onclick="showBarcodeGenerator()" 
+                            class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">
+                            <i class="fas fa-times mr-2"></i>İptal
+                        </button>
+                        <button type="submit" 
+                            class="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition shadow-md">
+                            <i class="fas fa-qrcode mr-2"></i>Barkod Üret
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.getElementById('existingProductSelect').addEventListener('change', (e) => {
+            if (e.target.value) {
+                document.getElementById('existingProductDetails').classList.remove('hidden');
+            } else {
+                document.getElementById('existingProductDetails').classList.add('hidden');
+            }
+        });
+        
+        document.getElementById('existingProductBarcodeForm').addEventListener('submit', handleExistingProductBarcode);
+    }
+}
+
+// Yeni ürün için barkod üretimi
+async function handleNewProductBarcode(e) {
+    e.preventDefault();
+    
+    const productData = {
+        urunAdi: document.getElementById('barcodeUrunAdi').value,
+        kategori: document.getElementById('barcodeKategori').value,
+        alisFiyati: parseFloat(document.getElementById('barcodeAlisFiyati').value),
+        satisFiyati: parseFloat(document.getElementById('barcodeSatisFiyati').value),
+        stokMiktari: parseInt(document.getElementById('barcodeStokMiktari').value),
+        indirim: parseFloat(document.getElementById('barcodeIndirim').value) || 0,
+        beden: document.getElementById('barcodeBeden').value || '',
+        barcodeAdet: parseInt(document.getElementById('barcodeAdet').value)
+    };
+    
+    try {
+        // Otomatik barkod üret (timestamp bazlı)
+        const barkod = generateBarcodeNumber();
+        
+        // Ürünü veritabanına ekle
+        await window.electronAPI.addProduct({
+            barkod: barkod,
+            urunAdi: productData.urunAdi,
+            kategori: productData.kategori,
+            beden: productData.beden,
+            alisFiyati: productData.alisFiyati,
+            satisFiyati: productData.satisFiyati,
+            stokMiktari: productData.stokMiktari,
+            indirim: productData.indirim
+        });
+        
+        // Barkodları göster ve yazdır
+        showBarcodePreview({
+            barkod: barkod,
+            urunAdi: productData.urunAdi,
+            kategori: productData.kategori,
+            beden: productData.beden,
+            adet: productData.barcodeAdet
+        });
+        
+        showNotification('Ürün başarıyla eklendi ve barkod oluşturuldu!', 'success');
+    } catch (error) {
+        console.error('Barkod üretim hatası:', error);
+        showNotification('Barkod üretilirken hata oluştu!', 'error');
+    }
+}
+
+// Mevcut ürün için barkod üretimi
+async function handleExistingProductBarcode(e) {
+    e.preventDefault();
+    
+    const productId = parseInt(document.getElementById('existingProductSelect').value);
+    const beden = document.getElementById('existingBarcodeBeden').value || '';
+    const adet = parseInt(document.getElementById('existingBarcodeAdet').value);
+    
+    try {
+        const products = await window.electronAPI.getProducts();
+        const product = products.find(p => p.id === productId);
+        
+        if (!product) {
+            showNotification('Ürün bulunamadı!', 'error');
+            return;
+        }
+        
+        // Barkodları göster ve yazdır
+        showBarcodePreview({
+            barkod: product.barkod,
+            urunAdi: product.urunAdi,
+            kategori: product.kategori || 'Kıyafet', // Ürünün kendi kategorisi veya default
+            beden: beden,
+            adet: adet
+        });
+        
+        showNotification('Barkod oluşturuldu!', 'success');
+    } catch (error) {
+        console.error('Barkod üretim hatası:', error);
+        showNotification('Barkod üretilirken hata oluştu!', 'error');
+    }
+}
+
+// Benzersiz barkod numarası üret
+function generateBarcodeNumber() {
+    const timestamp = Date.now().toString().slice(-10);
+    const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    return timestamp + random;
+}
+
+// Barkod önizleme ve yazdırma
+function showBarcodePreview(data) {
+    const formArea = document.getElementById('barcodeFormArea');
+    
+    let barcodesHTML = '';
+    for (let i = 0; i < data.adet; i++) {
+        barcodesHTML += `
+            <div class="barcode-item bg-white p-4 border-2 border-dashed border-gray-300 rounded-lg" style="page-break-inside: avoid;">
+                <div class="text-center mb-2">
+                    <div class="font-bold text-lg text-gray-800">${data.urunAdi}</div>
+                    <div class="text-sm text-gray-600">${data.kategori}</div>
+                    ${data.beden ? `<div class="text-sm font-semibold text-indigo-600">Beden: ${data.beden}</div>` : ''}
+                </div>
+                <div class="flex justify-center flex-col items-center">
+                    <svg id="barcode-${i}" class="barcode-svg"></svg>
+                    <div class="text-center mt-2" style="font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; letter-spacing: 2px;">NİSA TESETTÜR</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    formArea.innerHTML = `
+        <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-300">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-green-800 flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Barkodlar Oluşturuldu
+                </h3>
+                <div class="space-x-2">
+                    <button onclick="printBarcodes()" 
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-md">
+                        <i class="fas fa-print mr-2"></i>Yazdır
+                    </button>
+                    <button onclick="showBarcodeGenerator()" 
+                        class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+                        <i class="fas fa-redo mr-2"></i>Yeni Barkod
+                    </button>
+                </div>
+            </div>
+            
+            <div id="barcodePreviewArea" class="grid grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                ${barcodesHTML}
+            </div>
+        </div>
+    `;
+    
+    // Barkodları çiz
+    setTimeout(() => {
+        for (let i = 0; i < data.adet; i++) {
+            try {
+                JsBarcode(`#barcode-${i}`, data.barkod, {
+                    format: 'CODE128',
+                    width: 2,
+                    height: 60,
+                    displayValue: true,
+                    fontSize: 14,
+                    margin: 5
+                });
+            } catch (err) {
+                console.error('JsBarcode hatası:', err);
+            }
+        }
+    }, 100);
+}
+
+// Barkodları yazdır
+function printBarcodes() {
+    const printContent = document.getElementById('barcodePreviewArea').innerHTML;
+    const printWindow = window.open('', '', 'height=600,width=800');
+    
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Barkod Yazdırma</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                }
+                .barcode-item {
+                    display: inline-block;
+                    margin: 10px;
+                    padding: 15px;
+                    border: 2px dashed #ccc;
+                    text-align: center;
+                    page-break-inside: avoid;
+                }
+                @media print {
+                    body {
+                        margin: 0;
+                    }
+                    .barcode-item {
+                        margin: 5px;
+                        padding: 10px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                ${printContent}
+            </div>
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+    
+    showNotification('Barkodlar yazdırma için hazırlandı!', 'success');
+}
+
