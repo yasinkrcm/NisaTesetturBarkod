@@ -8,21 +8,21 @@ function showNotification(message, type = 'info') {
         console.log(`Skipping duplicate notification: ${message}`);
         return;
     }
-    
+
     activeNotifications.push(message);
     notificationCounter++;
-    
+
     const notification = document.createElement('div');
     const notificationId = `notification-${notificationCounter}`;
     notification.id = notificationId;
-    
+
     // Position notifications stacked from top
     const topPosition = 20 + (activeNotifications.length - 1) * 70;
-    
+
     // Create notification with icon and styled content
     let icon = '';
     notification.className = 'notification';
-    
+
     if (type === 'error') {
         notification.classList.add('error');
         icon = '<i class="fas fa-exclamation-circle mr-2"></i>';
@@ -33,10 +33,10 @@ function showNotification(message, type = 'info') {
         notification.classList.add('info');
         icon = '<i class="fas fa-info-circle mr-2"></i>';
     }
-    
+
     notification.style.top = `${topPosition}px`;
     notification.style.zIndex = 9999;
-    
+
     // Create structured content
     notification.innerHTML = `
         <div class="flex items-center">
@@ -46,7 +46,7 @@ function showNotification(message, type = 'info') {
             <div class="ml-2 font-medium">${message}</div>
         </div>
     `;
-    
+
     document.body.appendChild(notification);
     console.log(`Showing notification: ${message} (${type})`);
 
@@ -54,11 +54,11 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.style.transform = 'translateX(120%)';
         notification.style.opacity = 0;
-        
+
         setTimeout(() => {
             notification.remove();
             activeNotifications = activeNotifications.filter(msg => msg !== message);
-            
+
             // Reposition remaining notifications
             document.querySelectorAll('.notification').forEach((element, index) => {
                 element.style.top = `${20 + index * 70}px`;
@@ -69,12 +69,21 @@ function showNotification(message, type = 'info') {
 
 // Kullanıcı arayüzü işlemleri
 document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('loginForm');
-    const mainApp = document.getElementById('mainApp');
+    // Bypass login and initialize app immediately
+    const defaultUser = {
+        id: 1,
+        kullaniciAdi: 'SametAslan',
+        yetkiSeviyesi: 1
+    };
+
+    // Hide login form and show main app (just in case)
+    if (loginForm) loginForm.classList.add('hidden');
+    if (mainApp) mainApp.classList.remove('hidden');
+
+    initializeApp(defaultUser);
+
     // Initialize form handlers when the document loads
     initializeFormHandlers();
-    // Focus username field
-    document.getElementById('username').focus();
 });
 
 // Keyboard shortcuts
@@ -83,12 +92,12 @@ document.addEventListener('keydown', (e) => {
     if (document.getElementById('mainApp').classList.contains('hidden')) {
         return;
     }
-    
+
     // Check if user is typing in an input field
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
         return;
     }
-    
+
     switch (e.key) {
         case 'F1':
             e.preventDefault();
@@ -99,92 +108,72 @@ document.addEventListener('keydown', (e) => {
                 showNotification('Barkod tarama alanına odaklanıldı', 'info');
             }
             break;
-            
+
         case 'F2':
             e.preventDefault();
             // Go to product list
             showProducts();
             showNotification('Ürün listesi açıldı (F2)', 'info');
             break;
-            
+
         case 'F3':
             e.preventDefault();
             // Go to sales
             showSales();
             showNotification('Satışlar sayfası açıldı (F3)', 'info');
             break;
-            
+
         case 'F4':
             e.preventDefault();
             // Add new product
             addProduct();
             showNotification('Yeni ürün ekleme sayfası açıldı (F4)', 'info');
             break;
-            
+
         case 'F5':
             e.preventDefault();
             // Go to daily report
             getDailyReport();
             showNotification('Gün sonu raporu açıldı (F5)', 'info');
             break;
-            
+
         case 'F6':
             e.preventDefault();
             // Go to barcode generator
             showBarcodeGenerator();
             showNotification('Barkod üretici açıldı (F6)', 'info');
             break;
-            
+
         case 'F10':
             e.preventDefault();
             // Complete sale
             completeSale();
             showNotification('Satış tamamlanıyor... (F10)', 'info');
             break;
-            
+
         case 'Escape':
             e.preventDefault();
             // Return to main menu
             showMainMenu();
-            showNotification('Ana menüye dönüldü (ESC)', 'info');
+            if (activeNotifications.length === 0) { // Don't spam notifications
+                showNotification('Ana menüye dönüldü (ESC)', 'info');
+            }
             break;
     }
 });
+
+// Logout function converted to Reload/Exit
+function logout() {
+    // Reload the application to reset state (effectively simplified logout/restart)
+    window.location.reload();
+}
 
 let currentUser = null;
 let cart = [];
 
 // Login function
-async function login() {
-    console.log('Login function called');
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    if (!username || !password) {
-        showNotification('Kullanıcı adı ve şifre gereklidir!', 'error');
-        return;
-    }
-
-    try {
-        console.log('Attempting login with:', { username });
-        const user = await window.electronAPI.login({ username, password });
-        
-        if (user) {
-            console.log('Login successful:', user);
-            currentUser = user;
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('mainApp').classList.remove('hidden');
-            await initializeMainApp();
-            showNotification('Giriş başarılı!', 'success');
-        } else {
-            console.log('Login failed: Invalid credentials');
-            showNotification('Kullanıcı adı veya şifre hatalı!', 'error');
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        showNotification('Giriş yapılırken bir hata oluştu!', 'error');
-    }
-}
+// Login function removed as it is no longer used
+// async function login() { ... }
 
 // Form işleyicilerini başlat
 function initializeFormHandlers() {
@@ -196,7 +185,7 @@ function initializeFormHandlers() {
             login();
         });
     }
-    
+
     // Password field'da Enter tuşu için event listener
     const passwordInput = document.getElementById('password');
     if (passwordInput) {
@@ -213,7 +202,7 @@ function initializeFormHandlers() {
     if (addProductForm) {
         addProductForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const product = {
                 barkod: document.getElementById('newBarkod').value,
                 urunAdi: document.getElementById('newUrunAdi').value,
@@ -253,7 +242,7 @@ function setupFormEventListeners() {
     if (addProductForm) {
         addProductForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const product = {
                 barkod: document.getElementById('newBarkod').value,
                 urunAdi: document.getElementById('newUrunAdi').value,
@@ -296,7 +285,7 @@ function setupEnterKeyNavigation(formId) {
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                
+
                 // If it's the last input, submit the form
                 if (index === inputs.length - 1) {
                     form.dispatchEvent(new Event('submit'));
@@ -316,20 +305,20 @@ async function initializeMainApp() {
     if (loadingOverlay) {
         loadingOverlay.classList.remove('hidden');
     }
-    
+
     const mainApp = document.getElementById('mainApp');
-    
+
     // Load latest statistics and start automatic updates
     await loadStatistics();
     startAutomaticStatsUpdates();
     console.log('Uygulama başlatıldı ve istatistik otomatik güncellemesi aktif edildi.');
-    
+
     // Get the current time for greeting
     const hour = new Date().getHours();
     let greeting = "Günaydın";
     if (hour >= 12 && hour < 18) greeting = "İyi Günler";
     else if (hour >= 18) greeting = "İyi Akşamlar";
-    
+
     mainApp.innerHTML = `
         <div class="h-screen flex flex-col bg-gray-100 overflow-hidden">
             <!-- Header -->
@@ -362,8 +351,8 @@ async function initializeMainApp() {
                         </div>
                         
                         <button onclick="logout()" class="flex items-center bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg shadow-lg transition duration-300 transform hover:-translate-y-1 w-full md:w-auto justify-center">
-                            <i class="fas fa-sign-out-alt mr-2"></i>
-                            <span>Çıkış</span>
+                            <i class="fas fa-power-off mr-2"></i>
+                            <span>Uygulamayı Kapat</span>
                         </button>
                     </div>
                 </div>
@@ -637,29 +626,26 @@ async function initializeMainApp() {
         if (loadingOverlay) {
             loadingOverlay.classList.add('hidden');
         }
-        
+
         // Add enter animation to main app
         mainApp.classList.add('animate-fadeIn');
     }, 800);
 
     // Setup event listeners after content is loaded
     setupFormEventListeners();
-    
+
     // Initialize cart display
     updateCartDisplay();
-    
+
     console.log("Ana menü başarıyla yüklendi.");
 }
 
 // Initialize the main application with user data
 async function initializeApp(user) {
     currentUser = user;
-    document.getElementById('loginForm').classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
-    
-    // userInfo elementi bulunamadı, bu satırı kaldırıyoruz
-    // document.getElementById('userInfo').textContent = user.kullaniciAdi;
-    
+    if (document.getElementById('loginForm')) document.getElementById('loginForm').classList.add('hidden');
+    if (document.getElementById('mainApp')) document.getElementById('mainApp').classList.remove('hidden');
+
     await loadStatistics();
     await initializeMainApp();
 }
@@ -672,22 +658,22 @@ async function loadStatistics() {
             console.log('Kullanıcı oturumu kapandı, istatistik güncelleme atlanıyor');
             return;
         }
-        
+
         // getDailyReport verileri doğrudan kullanılıyor - getStatistics yerine
         const dailyData = await window.electronAPI.getDailyReport();
         console.log('Loaded Daily Report statistics:', dailyData);
-        
+
         // Update quick stats display using specific IDs for better targeting
         const saleCountElement = document.getElementById('statsToplamSatis');
         const revenueElement = document.getElementById('statsToplamCiro');
-        
+
         if (saleCountElement) {
             saleCountElement.textContent = dailyData.toplamSatis || 0;
         }
-        
+
         if (revenueElement) {
             // Formatı "1234.56 TL" olarak ayarlanıyor
-            const ciro = typeof dailyData.toplamCiro === 'number' ? 
+            const ciro = typeof dailyData.toplamCiro === 'number' ?
                 dailyData.toplamCiro.toFixed(2) : dailyData.toplamCiro || '0.00';
             revenueElement.textContent = `${ciro} TL`;
         }
@@ -696,7 +682,7 @@ async function loadStatistics() {
         // Show fallback values if there was an error
         const saleCountElement = document.getElementById('statsToplamSatis');
         const revenueElement = document.getElementById('statsToplamCiro');
-        
+
         if (saleCountElement) saleCountElement.textContent = '0';
         if (revenueElement) revenueElement.textContent = '0.00 TL';
     }
@@ -708,16 +694,16 @@ let statsUpdateTimer; // İstatistikleri güncelleme için zamanlayıcı
 function startAutomaticStatsUpdates() {
     // Önceki zamanlayıcı varsa temizle
     stopAutomaticStatsUpdates();
-    
+
     // Hemen ilk güncelleştirmeyi yap
     loadStatistics();
-    
+
     // Her 30 saniyede bir istatistikleri güncelle
     statsUpdateTimer = setInterval(async () => {
         console.log('Otomatik istatistik güncellemesi yapılıyor...');
         await loadStatistics();
     }, 30000); // 30 saniye
-    
+
     console.log('Otomatik istatistik güncellemeleri başlatıldı - her 30 saniyede bir güncellenecek');
 }
 
@@ -734,36 +720,23 @@ function stopAutomaticStatsUpdates() {
 async function showMainMenu() {
     // Refresh statistics when returning to main menu
     await loadStatistics();
-    
+
     // Show main page sections
     document.getElementById('barcodeSection').style.display = 'block';
     document.getElementById('quickActionsSection').style.display = 'block';
     document.getElementById('statsSection').style.display = 'block';
     document.getElementById('shortcutsSection').style.display = 'block';
-    
+
     // Clear dynamic content
     document.getElementById('dynamicContent').innerHTML = '';
-    
+
     // Otomatik input focus kaldırıldı
-    
+
     console.log("Ana menüye dönüldü.");
 }
 
-// Logout function
-function logout() {
-    currentUser = null;
-    // Clear cart on logout for security reasons
-    cart = [];
-    document.getElementById('mainApp').classList.add('hidden');
-    document.getElementById('loginForm').classList.remove('hidden');
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-    document.getElementById('username').focus();
-    
-    // Stop automatic statistics updates on logout
-    stopAutomaticStatsUpdates();
-    console.log('Kullanıcı oturumu sonlandırıldı, istatistik güncellemeleri durduruldu.');
-}
+// Logout function is now just a reload/close
+// function logout() { ... } replaced above
 
 // This is now handled in the main DOMContentLoaded event listener above
 
@@ -790,13 +763,13 @@ function showLoginPage() {
 async function showProducts() {
     try {
         const products = await window.electronAPI.getProducts();
-        
+
         // Hide main page sections
         document.getElementById('barcodeSection').style.display = 'none';
         document.getElementById('quickActionsSection').style.display = 'none';
         document.getElementById('statsSection').style.display = 'none';
         document.getElementById('shortcutsSection').style.display = 'none';
-        
+
         // Load content into dynamic area
         const dynamicContent = document.getElementById('dynamicContent');
         dynamicContent.innerHTML = `
@@ -863,18 +836,18 @@ async function showProducts() {
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="font-medium text-indigo-600">
                                                 ${p.satisFiyati.toFixed(2)} TL
-                                                ${p.indirim > 0 ? 
-                                                    `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${p.indirim} İndirim</span>
-                                                    <div class="text-sm text-red-500">İndirimli: ${(p.satisFiyati * (1 - p.indirim/100)).toFixed(2)} TL</div>` 
-                                                : ''}
+                                                ${p.indirim > 0 ?
+                `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${p.indirim} İndirim</span>
+                                                    <div class="text-sm text-red-500">İndirimli: ${(p.satisFiyati * (1 - p.indirim / 100)).toFixed(2)} TL</div>`
+                : ''}
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            ${p.stokMiktari > 10 
-                                            ? `<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">${p.stokMiktari} adet</span>` 
-                                            : p.stokMiktari > 3 
-                                            ? `<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">${p.stokMiktari} adet</span>` 
-                                            : `<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">${p.stokMiktari} adet</span>`}
+                                            ${p.stokMiktari > 10
+                ? `<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">${p.stokMiktari} adet</span>`
+                : p.stokMiktari > 3
+                    ? `<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">${p.stokMiktari} adet</span>`
+                    : `<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">${p.stokMiktari} adet</span>`}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div class="flex justify-end space-x-2">
@@ -898,7 +871,7 @@ async function showProducts() {
                 </div>
             </div>
         `;
-        
+
         // Setup event listeners after content is loaded
         setupFormEventListeners();
 
@@ -918,10 +891,10 @@ function setupProductSearch() {
     const searchInput = document.getElementById('productSearchInput');
     if (!searchInput) return;
 
-    searchInput.addEventListener('input', function() {
+    searchInput.addEventListener('input', function () {
         const searchTerm = this.value.toLowerCase().trim();
         const rows = document.querySelectorAll('#productTableBody tr');
-        
+
         rows.forEach(row => {
             const barkod = row.getAttribute('data-barkod').toLowerCase();
             if (barkod.includes(searchTerm)) {
@@ -939,13 +912,13 @@ function setupProductSearch() {
 async function showSales() {
     try {
         const sales = await window.electronAPI.getSales(currentUser.id);
-        
+
         // Hide main page sections
         document.getElementById('barcodeSection').style.display = 'none';
         document.getElementById('quickActionsSection').style.display = 'none';
         document.getElementById('statsSection').style.display = 'none';
         document.getElementById('shortcutsSection').style.display = 'none';
-        
+
         // Load content into dynamic area
         const dynamicContent = document.getElementById('dynamicContent');
         dynamicContent.innerHTML = `
@@ -1029,7 +1002,7 @@ async function showSales() {
                 </div>
             </div>
         `;
-        
+
         // Setup event listeners after content is loaded
         setupFormEventListeners();
     } catch (error) {
@@ -1045,7 +1018,7 @@ function addProduct() {
     document.getElementById('quickActionsSection').style.display = 'none';
     document.getElementById('statsSection').style.display = 'none';
     document.getElementById('shortcutsSection').style.display = 'none';
-    
+
     // Load content into dynamic area
     const dynamicContent = document.getElementById('dynamicContent');
     dynamicContent.innerHTML = `
@@ -1072,14 +1045,14 @@ function addProduct() {
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">Kategori</label>
-                        <select id="newKategori" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
+                        <select id="newKategori" onchange="toggleSizeField(this.value, 'newBedenDiv', 'newBeden')" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
                             <option value="">Seçiniz...</option>
                             <option value="Kıyafet">Kıyafet</option>
                             <option value="Ev Tekstili">Ev Tekstili</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">Beden (Opsiyonel)</label>
+                    <div id="newBedenDiv" class="hidden">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Beden (Zorunlu)</label>
                         <input type="text" id="newBeden" placeholder="S, M, L, XL..." class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
                     </div>
                     <div>
@@ -1114,20 +1087,34 @@ function addProduct() {
     setTimeout(() => {
         setupEnterKeyNavigation('addProductForm');
         document.dispatchEvent(new Event('addProductPageShown'));
-        // Otomatik input focus kaldırıldı, kısayollar her zaman çalışacak
     }, 100);
+}
+
+// Helper function to toggle size field visibility
+function toggleSizeField(category, containerId, inputId) {
+    const container = document.getElementById(containerId);
+    const input = document.getElementById(inputId);
+
+    if (category === 'Kıyafet') {
+        container.classList.remove('hidden');
+        input.required = true;
+    } else {
+        container.classList.add('hidden');
+        input.required = false;
+        input.value = ''; // Clear value if hidden
+    }
 }
 
 // Get daily report
 async function getDailyReport() {
     try {
         const report = await window.electronAPI.getDailyReport();
-        
+
         // Hide main page sections
         document.getElementById('barcodeSection').style.display = 'none';
         document.getElementById('quickActionsSection').style.display = 'none';
         document.getElementById('statsSection').style.display = 'none';
-        
+
         // Load content into dynamic area
         const dynamicContent = document.getElementById('dynamicContent');
         dynamicContent.innerHTML = `
@@ -1250,16 +1237,16 @@ async function resetDailyReport() {
         if (loadingOverlay) {
             loadingOverlay.classList.remove('hidden');
         }
-        
+
         // Get the report data before resetting for printing
         const reportData = await window.electronAPI.getDailyReport();
-        
+
         const result = await window.electronAPI.resetDailyReport();
         hideResetConfirmation();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
-            
+
             // Print end of day report with the data before reset
             if (reportData.toplamSatis > 0) {
                 try {
@@ -1270,23 +1257,23 @@ async function resetDailyReport() {
                     showNotification('Gün sonu raporu yazdırılırken bir hata oluştu!', 'error');
                 }
             }
-            
+
             // Refresh the report display after a short delay to show zeroed values
             setTimeout(async () => {
                 getDailyReport();
-                
+
                 // Hide loading overlay
                 if (loadingOverlay) {
                     loadingOverlay.classList.add('hidden');
                 }
-                
+
                 // No longer clear cart items - leave them intact when resetting daily reports
                 // Refresh stats to show reset values
                 await loadStatistics();
             }, 1000);
         } else {
             showNotification(result.message, 'error');
-            
+
             // Hide loading overlay
             if (loadingOverlay) {
                 loadingOverlay.classList.add('hidden');
@@ -1296,7 +1283,7 @@ async function resetDailyReport() {
         console.error('Error resetting daily report:', error);
         showNotification('Günlük satışlar sıfırlanırken bir hata oluştu!', 'error');
         hideResetConfirmation();
-        
+
         // Hide loading overlay
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) {
@@ -1309,9 +1296,9 @@ async function resetDailyReport() {
 async function updateItemQuantity(index, newQuantity) {
     // Don't allow quantity below 1
     if (newQuantity < 1) return;
-    
+
     const item = cart[index];
-    
+
     // Check if we have enough stock for the new quantity
     try {
         const product = await window.electronAPI.getProduct(item.urunId);
@@ -1319,7 +1306,7 @@ async function updateItemQuantity(index, newQuantity) {
             showNotification(`Yetersiz stok! ${item.urunAdi} için sadece ${product.stokMiktari} adet stok mevcut.`, 'error');
             return;
         }
-        
+
         // Update the item's discount in case it was changed in the product
         if (product && product.indirim !== undefined) {
             item.indirim = product.indirim;
@@ -1327,13 +1314,13 @@ async function updateItemQuantity(index, newQuantity) {
     } catch (error) {
         console.error('Error checking stock:', error);
     }
-    
+
     item.miktar = newQuantity;
-    
+
     // Apply discount if any
     const discountFactor = 1 - (item.indirim / 100 || 0);
     item.toplamFiyat = item.birimFiyat * newQuantity * discountFactor;
-    
+
     updateCartDisplay();
 }
 
@@ -1361,7 +1348,7 @@ async function completeSale() {
 
         if (saleId) {
             showNotification('Satış başarıyla tamamlandı!', 'success');
-            
+
             // Print receipt
             try {
                 await window.electronAPI.printSaleReceipt({
@@ -1374,13 +1361,13 @@ async function completeSale() {
                 console.error('Print error:', printError);
                 showNotification('Fiş yazdırılırken bir hata oluştu!', 'error');
             }
-            
+
             cart = [];
             updateCartDisplay();
-            
+
             // Refresh statistics after sale is completed
             await loadStatistics();
-            
+
             // Don't focus barcode input after successful sale completion
         }
     } catch (error) {
@@ -1397,12 +1384,12 @@ async function editProduct(id) {
             showNotification('Ürün bulunamadı!', 'error');
             return;
         }
-        
+
         // Hide main page sections
         document.getElementById('barcodeSection').style.display = 'none';
         document.getElementById('quickActionsSection').style.display = 'none';
         document.getElementById('statsSection').style.display = 'none';
-        
+
         // Load content into dynamic area
         const dynamicContent = document.getElementById('dynamicContent');
         dynamicContent.innerHTML = `
@@ -1464,17 +1451,17 @@ async function editProduct(id) {
                 </div>
             </div>
         `;
-        
+
         // Setup Enter key navigation for the edit form
         setTimeout(() => {
             setupEnterKeyNavigation('editProductForm');
-            
+
             // Set up the form submit handler
             const editForm = document.getElementById('editProductForm');
             if (editForm) {
                 editForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    
+
                     const updatedProduct = {
                         id: parseInt(document.getElementById('editProductId').value),
                         barkod: document.getElementById('editBarkod').value,
@@ -1486,7 +1473,7 @@ async function editProduct(id) {
                         stokMiktari: parseInt(document.getElementById('editStokMiktari').value),
                         indirim: parseFloat(document.getElementById('editIndirim').value || 0)
                     };
-                    
+
                     try {
                         const success = await window.electronAPI.updateProduct(updatedProduct);
                         if (success) {
@@ -1502,7 +1489,7 @@ async function editProduct(id) {
                 });
             }
         }, 100);
-        
+
     } catch (error) {
         console.error('Edit product error:', error);
         showNotification('Ürün düzenleme sayfası açılırken bir hata oluştu!', 'error');
@@ -1518,7 +1505,7 @@ async function deleteProduct(id) {
             showNotification('Ürün bulunamadı!', 'error');
             return;
         }
-        
+
         // Show modern confirmation modal
         showDeleteProductModal(product);
     } catch (error) {
@@ -1587,18 +1574,18 @@ function showDeleteProductModal(product) {
             </div>
         </div>
     `;
-    
+
     // Add modal to body
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
+
     // Setup checkbox event listener
     const checkbox = document.getElementById('confirmDeleteCheckbox');
     const confirmBtn = document.getElementById('confirmDeleteBtn');
-    
-    checkbox.addEventListener('change', function() {
+
+    checkbox.addEventListener('change', function () {
         confirmBtn.disabled = !this.checked;
     });
-    
+
     // Focus checkbox
     checkbox.focus();
 }
@@ -1615,9 +1602,9 @@ function hideDeleteProductModal() {
 async function confirmDeleteProduct(productId) {
     try {
         const result = await window.electronAPI.deleteProduct(productId);
-        
+
         hideDeleteProductModal();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             // Refresh product list
@@ -1639,9 +1626,9 @@ async function deleteSale(saleId) {
         if (!confirm('Bu satışı silmek istediğinizden emin misiniz?\n\nBu işlem:\n• Satışı tamamen silecek\n• Ürün stoklarını geri yükleyecek\n• Günlük raporlardan düşecek\n\nBu işlem geri alınamaz!')) {
             return;
         }
-        
+
         const result = await window.electronAPI.deleteSale(saleId);
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             // Refresh sales list
@@ -1663,17 +1650,17 @@ async function handleBarcodeInput(e) {
         e.preventDefault();
         const barcodeInput = document.getElementById('barcodeInput');
         const barcode = barcodeInput.value.trim();
-        
+
         if (barcode === '') {
             showNotification('Lütfen bir barkod girin!', 'error');
             barcodeInput.focus();
             return;
         }
-        
+
         try {
             console.log('Searching for product with barcode:', barcode);
             const product = await window.electronAPI.searchProduct(barcode);
-            
+
             // Log product details for debugging
             if (product) {
                 console.log('Ürün bulundu:', {
@@ -1685,7 +1672,7 @@ async function handleBarcodeInput(e) {
                     indirim: product.indirim || 0
                 });
             }
-            
+
             if (product) {
                 // Check if product stock is 0
                 if (product.stokMiktari === 0) {
@@ -1694,10 +1681,10 @@ async function handleBarcodeInput(e) {
                     barcodeInput.focus();
                     return;
                 }
-                
+
                 // Check if the product is already in the cart
                 const existingIndex = cart.findIndex(item => item.urunId === product.id);
-                
+
                 if (existingIndex !== -1) {
                     // Check if adding more would exceed stock
                     if (cart[existingIndex].miktar + 1 > product.stokMiktari) {
@@ -1706,12 +1693,12 @@ async function handleBarcodeInput(e) {
                         barcodeInput.focus();
                         return;
                     }
-                    
+
                     // Update discount information from product
                     if (product.indirim !== undefined) {
                         cart[existingIndex].indirim = product.indirim;
                     }
-                    
+
                     // Increase quantity if already in cart
                     updateItemQuantity(existingIndex, cart[existingIndex].miktar + 1);
                     showNotification(`${product.urunAdi} sepete eklendi!`, 'success');
@@ -1720,11 +1707,12 @@ async function handleBarcodeInput(e) {
                     const indirim = product.indirim || 0;
                     const discountFactor = 1 - (indirim / 100);
                     const discountedPrice = product.satisFiyati * discountFactor;
-                    
+
                     cart.push({
                         urunId: product.id,
                         barkod: product.barkod,
                         urunAdi: product.urunAdi,
+                        beden: product.beden || '',
                         birimFiyat: product.satisFiyati,
                         miktar: 1,
                         indirim: indirim,
@@ -1732,13 +1720,13 @@ async function handleBarcodeInput(e) {
                     });
                     showNotification(`${product.urunAdi} sepete eklendi!`, 'success');
                 }
-                
+
                 // Update the cart display
                 updateCartDisplay();
-                
-                // Clear the input field for next barcode and explicitly blur to prevent focus
+
+                // Clear the input field for next barcode and keep focus for continuous scanning
                 barcodeInput.value = '';
-                barcodeInput.blur();
+                barcodeInput.focus();
             } else {
                 showNotification('Ürün bulunamadı!', 'error');
                 barcodeInput.value = '';
@@ -1757,11 +1745,11 @@ async function handleBarcodeInput(e) {
 function updateCartDisplay() {
     const cartItemsContainer = document.getElementById('cartItems');
     const cartTotalElement = document.getElementById('cartTotal');
-    
+
     if (!cartItemsContainer || !cartTotalElement) {
         return;
     }
-    
+
     if (cart.length === 0) {
         cartItemsContainer.innerHTML = `
             <div class="flex flex-col items-center justify-center p-8 text-center">
@@ -1775,10 +1763,10 @@ function updateCartDisplay() {
         cartTotalElement.textContent = '0.00';
         return;
     }
-    
+
     // Calculate the total
     const total = cart.reduce((sum, item) => sum + item.toplamFiyat, 0);
-    
+
     // Update the cart display with detailed discount information
     cartItemsContainer.innerHTML = cart.map((item, index) => `
         <div class="py-4 flex items-center justify-between">
@@ -1788,13 +1776,13 @@ function updateCartDisplay() {
                         <i class="fas fa-box text-indigo-600"></i>
                     </div>
                     <div>
-                        <h3 class="font-medium">${item.urunAdi}</h3>
+                        <h3 class="font-medium">${item.urunAdi}${item.beden ? ` <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full ml-1">${item.beden} Beden</span>` : ''}</h3>
                         <div class="text-sm text-gray-500">
                             <span>${item.birimFiyat.toFixed(2)} TL x ${item.miktar}</span>
                             ${item.indirim > 0 ? `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${item.indirim} İndirim</span>` : ''}
                         </div>
-                        ${item.indirim > 0 ? 
-                        `<div class="text-xs text-red-500 flex items-center">
+                        ${item.indirim > 0 ?
+            `<div class="text-xs text-red-500 flex items-center">
                             <i class="fas fa-tag mr-1"></i>
                             <span>İndirimli fiyat: ${(item.birimFiyat * (1 - item.indirim / 100)).toFixed(2)} TL</span>
                         </div>` : ''}
@@ -1834,7 +1822,7 @@ function updateCartDisplay() {
             </div>
         </div>
     `).join('');
-    
+
     // Update the total display
     cartTotalElement.textContent = total.toFixed(2);
 }
@@ -1843,16 +1831,16 @@ function updateCartDisplay() {
 function updateItemDiscount(index, discountPercent) {
     // Validate discount percentage (0-100)
     const discount = Math.min(Math.max(parseFloat(discountPercent) || 0, 0), 100);
-    
+
     const item = cart[index];
     item.indirim = discount;
-    
+
     // Recalculate total price with discount
     const discountFactor = 1 - (discount / 100);
     item.toplamFiyat = item.birimFiyat * item.miktar * discountFactor;
-    
+
     console.log(`İndirim uygulandı: %${discount}, Birim Fiyat: ${item.birimFiyat} TL, İndirimli Birim Fiyat: ${(item.birimFiyat * discountFactor).toFixed(2)} TL, Toplam: ${item.toplamFiyat.toFixed(2)} TL`);
-    
+
     updateCartDisplay();
 }
 
@@ -1860,12 +1848,12 @@ function updateItemDiscount(index, discountPercent) {
 async function printCurrentDailyReport() {
     try {
         const reportData = await window.electronAPI.getDailyReport();
-        
+
         if (reportData.toplamSatis === 0) {
             showNotification('Yazdırılacak satış verisi bulunamadı!', 'error');
             return;
         }
-        
+
         await window.electronAPI.printEndOfDayReport(reportData);
         showNotification('Günlük rapor yazdırılıyor...', 'info');
     } catch (error) {
@@ -1883,7 +1871,7 @@ function showBarcodeGenerator() {
     document.getElementById('quickActionsSection').style.display = 'none';
     document.getElementById('statsSection').style.display = 'none';
     document.getElementById('shortcutsSection').style.display = 'none';
-    
+
     const dynamicContent = document.getElementById('dynamicContent');
     dynamicContent.innerHTML = `
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
@@ -1939,7 +1927,7 @@ function showBarcodeGenerator() {
 async function selectBarcodeMode(mode) {
     const formArea = document.getElementById('barcodeFormArea');
     formArea.classList.remove('hidden');
-    
+
     if (mode === 'new') {
         formArea.innerHTML = `
             <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
@@ -1958,7 +1946,7 @@ async function selectBarcodeMode(mode) {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Kategori *</label>
-                            <select id="barcodeKategori" required
+                            <select id="barcodeKategori" required onchange="toggleSizeField(this.value, 'barcodeBedenDiv', 'barcodeBeden')"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                 <option value="">Seçiniz...</option>
                                 <option value="Kıyafet">Kıyafet</option>
@@ -1990,8 +1978,8 @@ async function selectBarcodeMode(mode) {
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Beden (Opsiyonel)</label>
+                        <div id="barcodeBedenDiv" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Beden (Zorunlu) *</label>
                             <input type="text" id="barcodeBeden" placeholder="S, M, L, XL..."
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
@@ -2016,12 +2004,12 @@ async function selectBarcodeMode(mode) {
                 </form>
             </div>
         `;
-        
+
         document.getElementById('newProductBarcodeForm').addEventListener('submit', handleNewProductBarcode);
-        
+
     } else if (mode === 'existing') {
         const products = await window.electronAPI.getProducts();
-        
+
         formArea.innerHTML = `
             <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
                 <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
@@ -2036,24 +2024,16 @@ async function selectBarcodeMode(mode) {
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="">Ürün seçiniz...</option>
                             ${products.map(p => `
-                                <option value="${p.id}">${p.urunAdi} - ${p.barkod} (Stok: ${p.stokMiktari})</option>
+                                <option value="${p.id}">${p.urunAdi} ${p.beden ? `(${p.beden})` : ''} - ${p.barkod} (Stok: ${p.stokMiktari})</option>
                             `).join('')}
                         </select>
                     </div>
                     
                     <div id="existingProductDetails" class="hidden">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Beden (Opsiyonel)</label>
-                                <input type="text" id="existingBarcodeBeden" placeholder="S, M, L, XL..."
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Barkod Adedi *</label>
-                                <input type="number" id="existingBarcodeAdet" min="1" value="1" required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Barkod Adedi *</label>
+                            <input type="number" id="existingBarcodeAdet" min="1" value="1" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                     </div>
                     
@@ -2070,7 +2050,7 @@ async function selectBarcodeMode(mode) {
                 </form>
             </div>
         `;
-        
+
         document.getElementById('existingProductSelect').addEventListener('change', (e) => {
             if (e.target.value) {
                 document.getElementById('existingProductDetails').classList.remove('hidden');
@@ -2078,7 +2058,7 @@ async function selectBarcodeMode(mode) {
                 document.getElementById('existingProductDetails').classList.add('hidden');
             }
         });
-        
+
         document.getElementById('existingProductBarcodeForm').addEventListener('submit', handleExistingProductBarcode);
     }
 }
@@ -2086,7 +2066,7 @@ async function selectBarcodeMode(mode) {
 // Yeni ürün için barkod üretimi
 async function handleNewProductBarcode(e) {
     e.preventDefault();
-    
+
     const productData = {
         urunAdi: document.getElementById('barcodeUrunAdi').value,
         kategori: document.getElementById('barcodeKategori').value,
@@ -2097,11 +2077,11 @@ async function handleNewProductBarcode(e) {
         beden: document.getElementById('barcodeBeden').value || '',
         barcodeAdet: parseInt(document.getElementById('barcodeAdet').value)
     };
-    
+
     try {
         // Otomatik barkod üret (timestamp bazlı)
         const barkod = generateBarcodeNumber();
-        
+
         // Ürünü veritabanına ekle
         await window.electronAPI.addProduct({
             barkod: barkod,
@@ -2113,16 +2093,17 @@ async function handleNewProductBarcode(e) {
             stokMiktari: productData.stokMiktari,
             indirim: productData.indirim
         });
-        
+
         // Barkodları göster ve yazdır
         showBarcodePreview({
             barkod: barkod,
             urunAdi: productData.urunAdi,
             kategori: productData.kategori,
             beden: productData.beden,
+            satisFiyati: productData.satisFiyati,
             adet: productData.barcodeAdet
         });
-        
+
         showNotification('Ürün başarıyla eklendi ve barkod oluşturuldu!', 'success');
     } catch (error) {
         console.error('Barkod üretim hatası:', error);
@@ -2133,29 +2114,29 @@ async function handleNewProductBarcode(e) {
 // Mevcut ürün için barkod üretimi
 async function handleExistingProductBarcode(e) {
     e.preventDefault();
-    
+
     const productId = parseInt(document.getElementById('existingProductSelect').value);
-    const beden = document.getElementById('existingBarcodeBeden').value || '';
     const adet = parseInt(document.getElementById('existingBarcodeAdet').value);
-    
+
     try {
         const products = await window.electronAPI.getProducts();
         const product = products.find(p => p.id === productId);
-        
+
         if (!product) {
             showNotification('Ürün bulunamadı!', 'error');
             return;
         }
-        
-        // Barkodları göster ve yazdır
+
+        // Barkodları göster ve yazdır - ÜRÜNÜN MEVCUT BEDENİNİ KULLAN
         showBarcodePreview({
             barkod: product.barkod,
             urunAdi: product.urunAdi,
-            kategori: product.kategori || 'Kıyafet', // Ürünün kendi kategorisi veya default
-            beden: beden,
+            kategori: product.kategori || 'Kıyafet',
+            beden: product.beden || '', // Ürünün kendi bedenini kullan
+            satisFiyati: product.satisFiyati,
             adet: adet
         });
-        
+
         showNotification('Barkod oluşturuldu!', 'success');
     } catch (error) {
         console.error('Barkod üretim hatası:', error);
@@ -2163,34 +2144,34 @@ async function handleExistingProductBarcode(e) {
     }
 }
 
-// Benzersiz barkod numarası üret
+// Benzersiz barkod numarası üret (EAN-13 uyumlu olması için 12 hane üretilmeli)
 function generateBarcodeNumber() {
-    const timestamp = Date.now().toString().slice(-10);
-    const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    // EAN-13 kontrol basamağını kendi hesapladığı için biz 12 hane vermeliyiz
+    // Timestamp'in son 9 hanesi + 3 rastgele rakam = 12 hane
+    const timestamp = Date.now().toString().slice(-9);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     return timestamp + random;
 }
 
 // Barkod önizleme ve yazdırma
 function showBarcodePreview(data) {
     const formArea = document.getElementById('barcodeFormArea');
-    
+
     let barcodesHTML = '';
     for (let i = 0; i < data.adet; i++) {
+        // Vertical layout optimized for 40x25mm - LARGER FONTS
         barcodesHTML += `
-            <div class="barcode-item bg-white p-4 border-2 border-dashed border-gray-300 rounded-lg" style="page-break-inside: avoid;">
-                <div class="text-center mb-2">
-                    <div class="font-bold text-lg text-gray-800">${data.urunAdi}</div>
-                    <div class="text-sm text-gray-600">${data.kategori}</div>
-                    ${data.beden ? `<div class="text-sm font-semibold text-indigo-600">Beden: ${data.beden}</div>` : ''}
-                </div>
-                <div class="flex justify-center flex-col items-center">
-                    <svg id="barcode-${i}" class="barcode-svg"></svg>
-                    <div class="text-center mt-2" style="font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; letter-spacing: 2px;">NİSA TESETTÜR</div>
-                </div>
+            <div class="barcode-item bg-white p-1 border border-gray-300 rounded w-full flex flex-col items-center justify-center text-center">
+                <div class="product-name font-bold text-black w-full truncate">${data.urunAdi}</div>
+                ${data.beden ? `<div class="product-size font-bold text-black w-full truncate">${data.beden} BEDEN</div>` : ''}
+                <div class="product-price font-bold text-black">${parseFloat(data.satisFiyati || 0).toFixed(2)} TL</div>
+                <svg id="barcode-${i}" class="barcode-svg"></svg>
+                <div class="store-name font-bold text-black">NİSA TESETTÜR</div>
             </div>
         `;
     }
-    
+
+    // Preview container logic
     formArea.innerHTML = `
         <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-300">
             <div class="flex justify-between items-center mb-4">
@@ -2210,80 +2191,187 @@ function showBarcodePreview(data) {
                 </div>
             </div>
             
-            <div id="barcodePreviewArea" class="grid grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+            <div id="barcodePreviewArea" class="grid grid-cols-4 gap-4 max-h-96 overflow-y-auto">
                 ${barcodesHTML}
             </div>
         </div>
     `;
-    
-    // Barkodları çiz
+
+    // Draw barcodes with LARGER size
     setTimeout(() => {
         for (let i = 0; i < data.adet; i++) {
             try {
+                // Her zaman CODE128 kullanarak tam olarak girilen/üretilen numarayı barkoda çeviriyoruz
+                // EAN13 kullanırsak 12 haneli sayıya otomatik 13. haneyi (checksum) ekliyor, bu da istenmiyor
                 JsBarcode(`#barcode-${i}`, data.barkod, {
                     format: 'CODE128',
                     width: 2,
-                    height: 60,
+                    height: 30,
                     displayValue: true,
-                    fontSize: 14,
-                    margin: 5
+                    fontSize: 10, // Fontu biraz büyüttük okunabilirlik için
+                    margin: 0,
+                    textMargin: 0
                 });
             } catch (err) {
                 console.error('JsBarcode hatası:', err);
             }
         }
     }, 100);
+    // Pass context data to print function via a hidden element or variable if needed, 
+    // but here we just grab innerHTML of the preview area and style it differently for print.
 }
 
-// Barkodları yazdır
+// Barkodları yazdır (40x25mm Termal Etiket Optimize Edilmiş)
 function printBarcodes() {
-    const printContent = document.getElementById('barcodePreviewArea').innerHTML;
+    // Preview alanındaki itemları al
+    const barcodeItems = document.querySelectorAll('.barcode-item');
+    let printContent = '';
+
+    barcodeItems.forEach(item => {
+        // Preview için olan classları temizleyip, sadece içeriği kopyalıyoruz
+        const clone = item.cloneNode(true);
+        clone.classList.remove('bg-white', 'p-2', 'border', 'border-gray-300', 'rounded', 'w-full', 'h-full');
+        clone.classList.add('print-item');
+        printContent += clone.outerHTML;
+    });
+
     const printWindow = window.open('', '', 'height=600,width=800');
-    
+
     printWindow.document.write(`
         <html>
         <head>
             <title>Barkod Yazdırma</title>
             <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    margin: 20px;
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
                 }
-                .barcode-item {
-                    display: inline-block;
-                    margin: 10px;
-                    padding: 15px;
-                    border: 2px dashed #ccc;
-                    text-align: center;
-                    page-break-inside: avoid;
-                }
+                
                 @media print {
-                    body {
-                        margin: 0;
+                    @page {
+                        size: 40mm 25mm; /* 40x25mm GERİ DÖNÜŞ */
+                        margin: 0mm;
                     }
-                    .barcode-item {
-                        margin: 5px;
-                        padding: 10px;
+                    html, body {
+                        width: 40mm;
+                        height: 25mm;
+                        margin: 0 !important;
+                        padding: 0 !important;
                     }
+                    body::after { content: none !important; }
+                    
+                    .print-item {
+                        width: 40mm;
+                        height: 25mm;
+                        
+                        /* İçerik hizalama - Manuel Boşluklandırma */
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: flex-start; 
+                        text-align: center;
+                        
+                        margin: 0 !important;
+                        /* Üstten minimum boşluk */
+                        padding-top: 1mm !important; 
+                        padding-left: 1mm;
+                        padding-right: 1mm;
+                        padding-bottom: 0 !important;
+                        
+                        page-break-after: always;
+                        overflow: hidden;
+                        border: none !important;
+                    }
+                    
+                    .print-item:last-child {
+                        page-break-after: auto;
+                    }
+                }
+                
+                body { font-family: Arial, sans-serif; }
+                
+                /* --- İÇERİK AYARLARI (4x ORANTILI BOŞLUKLAR) --- */
+                
+                /* Ürün Adı */
+                .product-name {
+                    font-size: 8pt !important;
+                    font-weight: bold !important;
+                    text-transform: uppercase !important;
+                    line-height: 1 !important;
+                    
+                    max-height: 4mm;
+                    overflow: hidden !important;
+                    white-space: nowrap !important;
+                    width: 100% !important;
+                    
+                    margin: 0 !important;
+                    margin-bottom: 0.5mm !important; /* Boşluk azaltıldı */
+                }
+                
+                /* Beden */
+                .product-size {
+                    font-size: 9pt !important;
+                    font-weight: 900 !important;
+                    text-transform: uppercase !important;
+                    line-height: 1 !important;
+                    
+                    margin: 0 !important;
+                    margin-bottom: 0.5mm !important; /* Boşluk azaltıldı */
+                }
+                
+                /* Fiyat */
+                .product-price {
+                    font-size: 14pt !important;
+                    font-weight: 900 !important;
+                    line-height: 0.9 !important;
+                    
+                    margin: 0 !important;
+                    margin-bottom: 0.5mm !important; /* Boşluk azaltıldı */
+                }
+                
+                /* Barkod Çizgileri */
+                .barcode-svg {
+                    width: 95% !important;
+                    height: 10mm !important; /* Yükseklik artırıldı */
+                    max-width: 38mm !important;
+                    display: block;
+                    
+                    margin: 0 !important;
+                    margin-left: 1mm !important; /* Sağa kaydır */
+                    margin-top: 1mm !important; /* Üstten boşluk */
+                    margin-bottom: 1mm !important; /* Alttan boşluk */
+                }
+                
+                /* Mağaza Adı */
+                .store-name {
+                    font-size: 13pt !important; /* KOCAMAN */
+                    font-weight: 900 !important;
+                    text-transform: uppercase !important;
+                    line-height: 0.9 !important;
+                    margin: 0 !important;
+                    white-space: nowrap !important;
+                    width: 100% !important;
+                    letter-spacing: -0.5px !important;
                 }
             </style>
         </head>
         <body>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <div id="print-container">
                 ${printContent}
             </div>
         </body>
         </html>
     `);
-    
+
     printWindow.document.close();
     printWindow.focus();
-    
+
+    // Resim/Font yüklenmesi için ufak gecikme
     setTimeout(() => {
         printWindow.print();
         printWindow.close();
     }, 500);
-    
+
     showNotification('Barkodlar yazdırma için hazırlandı!', 'success');
 }
-

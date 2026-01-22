@@ -61,7 +61,7 @@ if (!db.get('kullanicilar').find({ kullaniciAdi: 'SametAslan' }).value()) {
     db.get('kullanicilar')
         .remove({ kullaniciAdi: 'admin' })
         .write();
-    
+
     // Add new admin user
     db.get('kullanicilar')
         .push({
@@ -123,12 +123,12 @@ ipcMain.handle('searchProduct', (event, barcode) => {
         console.log(`Main process searching for barcode: ${barcode}`);
         // Convert barcode to string to ensure consistent comparison
         const barcodeStr = String(barcode).trim();
-        
+
         // Find product where barcodes match, converting both to strings for comparison
         const product = db.get('urunler')
             .find(item => String(item.barkod).trim() === barcodeStr)
             .value();
-            
+
         console.log('Product found in database:', product);
         return product;
     } catch (error) {
@@ -139,7 +139,7 @@ ipcMain.handle('searchProduct', (event, barcode) => {
 
 ipcMain.handle('saveSale', (event, data) => {
     const saleId = db.get('lastId.satislar').value() + 1;
-    
+
     // Insert sale
     db.get('satislar')
         .push({
@@ -191,7 +191,7 @@ ipcMain.handle('getSales', (event, userId) => {
             const product = db.get('urunler')
                 .find({ id: detail.urunId })
                 .value();
-            return `${product.urunAdi} (${detail.miktar})`;
+            return `${product.urunAdi}${product.beden ? ` (${product.beden})` : ''} (${detail.miktar})`;
         });
 
         return {
@@ -249,38 +249,38 @@ ipcMain.handle('getProduct', (event, id) => {
 ipcMain.handle('getDailyReport', () => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        
+
         // Get today's sales that haven't been counted in a daily report
         const todaySales = db.get('satislar')
             .filter(sale => sale.tarih.startsWith(today) && !sale.dailyReportCounted)
             .value();
-            
+
         // Get IDs of today's sales
         const saleIds = todaySales.map(sale => sale.id);
-        
+
         // Calculate totals
         const toplamSatis = todaySales.length; // Total sales count
         const toplamCiro = todaySales.reduce((sum, sale) => sum + sale.toplamTutar, 0); // Total revenue
-        
+
         // Get details of today's sales for calculating profit
         const saleDetails = db.get('satisDetay')
             .filter(detail => saleIds.includes(detail.satisId))
             .value();
-            
+
         // Calculate total profit
         let toplamKar = 0;
-        
+
         saleDetails.forEach(detail => {
             const product = db.get('urunler')
                 .find({ id: detail.urunId })
                 .value();
-                
+
             if (product) {
                 const kar = (product.satisFiyati - product.alisFiyati) * detail.miktar;
                 toplamKar += kar;
             }
         });
-        
+
         return { toplamSatis, toplamCiro, toplamKar };
     } catch (error) {
         console.error('Error getting daily report:', error);
@@ -292,40 +292,40 @@ ipcMain.handle('getDailyReport', () => {
 ipcMain.handle('getStatistics', () => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        
+
         // Get today's sales that haven't been counted in a daily report
         const todaySales = db.get('satislar')
             .filter(sale => sale.tarih.startsWith(today) && !sale.dailyReportCounted)
             .value();
-            
+
         // Get IDs of today's sales
         const saleIds = todaySales.map(sale => sale.id);
-        
+
         // Calculate totals
         const toplamSatis = todaySales.length; // Total sales count
         const toplamCiro = todaySales.reduce((sum, sale) => sum + sale.toplamTutar, 0); // Total revenue
-        
+
         // Get details of today's sales for calculating profit
         const saleDetails = db.get('satisDetay')
             .filter(detail => saleIds.includes(detail.satisId))
             .value();
-            
+
         // Calculate total profit
         let toplamKar = 0;
-        
+
         saleDetails.forEach(detail => {
             const product = db.get('urunler')
                 .find({ id: detail.urunId })
                 .value();
-                
+
             if (product) {
                 const kar = (product.satisFiyati - product.alisFiyati) * detail.miktar;
                 toplamKar += kar;
             }
         });
-        
-        return { 
-            toplamSatis, 
+
+        return {
+            toplamSatis,
             toplamCiro: toplamCiro.toFixed(2),
             toplamKar: toplamKar.toFixed(2)
         };
@@ -338,7 +338,7 @@ ipcMain.handle('getStatistics', () => {
 ipcMain.handle('resetDailyReport', () => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        
+
         // Mark today's sales as counted in the daily report by adding a field
         // This way they stay in the permanent sales log but aren't counted in daily reports
         db.get('satislar')
@@ -347,7 +347,7 @@ ipcMain.handle('resetDailyReport', () => {
                 sale.dailyReportCounted = true;
             })
             .write();
-            
+
         return { success: true, message: "Günlük satışlar sıfırlandı!" };
     } catch (error) {
         console.error('Error resetting daily report:', error);
@@ -363,13 +363,13 @@ ipcMain.handle('deleteProduct', (event, id) => {
         if (!product) {
             return { success: false, message: "Ürün bulunamadı!" };
         }
-        
+
         // Check if product is used in any sales
         const saleDetails = db.get('satisDetay').filter({ urunId: id }).value();
         if (saleDetails.length > 0) {
             return { success: false, message: "Bu ürün satışlarda kullanıldığı için silinemez!" };
         }
-        
+
         // Delete the product
         db.get('urunler').remove({ id: id }).write();
         return { success: true, message: "Ürün başarıyla silindi!" };
@@ -387,10 +387,10 @@ ipcMain.handle('deleteSale', (event, saleId) => {
         if (!sale) {
             return { success: false, message: "Satış bulunamadı!" };
         }
-        
+
         // Get sale details to restore stock
         const saleDetails = db.get('satisDetay').filter({ satisId: saleId }).value();
-        
+
         // Restore stock for each product in the sale
         saleDetails.forEach(detail => {
             db.get('urunler')
@@ -398,13 +398,13 @@ ipcMain.handle('deleteSale', (event, saleId) => {
                 .update('stokMiktari', n => n + detail.miktar)
                 .write();
         });
-        
+
         // Delete sale details first (foreign key constraint)
         db.get('satisDetay').remove({ satisId: saleId }).write();
-        
+
         // Delete the sale
         db.get('satislar').remove({ id: saleId }).write();
-        
+
         return { success: true, message: "Satış başarıyla silindi ve stoklar geri yüklendi!" };
     } catch (error) {
         console.error('Delete sale error:', error);
@@ -452,7 +452,7 @@ ipcMain.handle('printSaleReceipt', (event, saleData) => {
             <div class="line"></div>
             ${saleData.items.map(item => `
                 <div class="item">
-                    <span>${item.urunAdi} x${item.miktar}</span>
+                    <span>${item.urunAdi}${item.beden ? ` (${item.beden})` : ''} x${item.miktar}</span>
                     <span>${item.toplamFiyat.toFixed(2)} TL</span>
                 </div>
             `).join('')}
