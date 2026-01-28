@@ -106,6 +106,34 @@ function migrateProductsToNewFormat() {
 
 migrateProductsToNewFormat();
 
+// Auto-repair stock consistency: recalculate stokMiktari from bedenler
+function repairStockConsistency() {
+    const products = db.get('urunler').value();
+    let repairsCount = 0;
+
+    products.forEach(product => {
+        if (product.bedenler && Array.isArray(product.bedenler) && product.bedenler.length > 0) {
+            const calculatedTotal = product.bedenler.reduce((sum, b) => sum + (parseInt(b.miktar) || 0), 0);
+
+            // If total doesn't match sum, fix it
+            if (product.stokMiktari !== calculatedTotal) {
+                console.log(`Fixing stock mismatch for ${product.urunAdi} (ID: ${product.id}): DB=${product.stokMiktari}, Real=${calculatedTotal}`);
+                db.get('urunler')
+                    .find({ id: product.id })
+                    .assign({ stokMiktari: calculatedTotal })
+                    .write();
+                repairsCount++;
+            }
+        }
+    });
+
+    if (repairsCount > 0) {
+        console.log(`Repaired stock consistency for ${repairsCount} products.`);
+    }
+}
+
+repairStockConsistency();
+
 // Create default admin user if not exists
 if (!db.get('kullanicilar').find({ kullaniciAdi: 'SametAslan' }).value()) {
     // Remove old admin user if exists
@@ -223,6 +251,48 @@ ipcMain.handle('searchProduct', (event, barcode) => {
 });
 
 ipcMain.handle('saveSale', (event, data) => {
+    // 1. Pre-validation loop
+    for (const item of data.items) {
+        const product = db.get('urunler').find({ id: item.urunId }).value();
+
+        if (!product) {
+            throw new Error(`Ürün bulunamadı: ${item.urunAdi}`);
+        }
+
+        let availableStock = 0;
+
+        // Check if product has variants (bedenler)
+        if (product.bedenler && Array.isArray(product.bedenler) && product.bedenler.length > 0) {
+            // It's a varianted product
+            if (!item.beden) {
+                // Try to find if there's only one size, otherwise error
+                if (product.bedenler.length === 1) {
+                    availableStock = product.bedenler[0].miktar;
+                } else {
+                    throw new Error(`Beden seçimi gerekli: ${product.urunAdi}`);
+                }
+            } else {
+                // Find specific size
+                const variant = product.bedenler.find(b =>
+                    String(b.beden).trim() === String(item.beden).trim()
+                );
+
+                if (!variant) {
+                    throw new Error(`Beden bulunamadı: ${product.urunAdi} - ${item.beden}`);
+                }
+                availableStock = variant.miktar;
+            }
+        } else {
+            // Standard product (no variants)
+            availableStock = product.stokMiktari;
+        }
+
+        if (availableStock < item.miktar) {
+            throw new Error(`Yetersiz stok! ${product.urunAdi} (${item.beden || 'Standart'}) için sadece ${availableStock} adet kaldı.`);
+        }
+    }
+
+    // 2. Execution loop
     const saleId = db.get('lastId.satislar').value() + 1;
 
     // Insert sale
@@ -253,26 +323,60 @@ ipcMain.handle('saveSale', (event, data) => {
             .write();
         db.update('lastId.satisDetay', n => n + 1).write();
 
-        // Update stock based on format
+        // Update stock fully consistent
         const product = db.get('urunler').find({ id: item.urunId }).value();
 
-        if (product.bedenler && Array.isArray(product.bedenler)) {
-            // New format: update specific beden's miktar
-            const bedenIndex = product.bedenler.findIndex(b => b.beden === item.beden);
+        if (product.bedenler && Array.isArray(product.bedenler) && product.bedenler.length > 0) {
+            // Find index with robust matching
+            const bedenIndex = product.bedenler.findIndex(b =>
+                String(b.beden).trim() === String(item.beden).trim()
+            );
+
             if (bedenIndex !== -1) {
+                // Get fresh copy of product to modify
+                const freshProduct = db.get('urunler').find({ id: item.urunId }).value();
+                const currentMiktar = parseInt(freshProduct.bedenler[bedenIndex].miktar) || 0;
+                const saleMiktar = parseInt(item.miktar) || 0;
+
+                const oldStock = currentMiktar;
+                const newStock = currentMiktar - saleMiktar;
+
+                // Update the array in memory
+                freshProduct.bedenler[bedenIndex].miktar = newStock;
+
+                // Recalculate total stock from SUM of variants
+                const totalStock = freshProduct.bedenler.reduce((sum, b) => sum + (parseInt(b.miktar) || 0), 0);
+                freshProduct.stokMiktari = totalStock;
+
+                // Persist the changes
                 db.get('urunler')
                     .find({ id: item.urunId })
-                    .get(`bedenler[${bedenIndex}].miktar`)
-                    .update(n => n - item.miktar)
+                    .assign({
+                        bedenler: freshProduct.bedenler,
+                        stokMiktari: totalStock
+                    })
                     .write();
-            }
-        }
 
-        // Top-level stock is ALWAYS the sum of all sizes (or the single stock for old format)
-        db.get('urunler')
-            .find({ id: item.urunId })
-            .update('stokMiktari', n => n - item.miktar)
-            .write();
+                console.log(`SOLD: ${freshProduct.urunAdi} (${freshProduct.bedenler[bedenIndex].beden}) | Qty: ${saleMiktar} | Old Stock: ${oldStock} | New Stock: ${newStock} | Total Stock: ${totalStock}`);
+
+            } else {
+                console.error(`CRITICAL: Beden not found during write for ${product.urunAdi} - ${item.beden}`);
+            }
+        } else {
+            const freshProduct = db.get('urunler').find({ id: item.urunId }).value();
+            const currentMiktar = parseInt(freshProduct.stokMiktari) || 0;
+            const saleMiktar = parseInt(item.miktar) || 0;
+
+            const oldStock = currentMiktar;
+            const newStock = currentMiktar - saleMiktar;
+
+            db.get('urunler')
+                .find({ id: item.urunId })
+                .assign({ stokMiktari: newStock })
+                .write();
+
+            console.log(`SOLD: ${freshProduct.urunAdi} (Standart) | Qty: ${saleMiktar} | Old Stock: ${oldStock} | New Stock: ${newStock}`);
+        }
     });
 
     return saleId;

@@ -1534,8 +1534,18 @@ async function updateItemQuantity(index, newQuantity) {
     // Check if we have enough stock for the new quantity
     try {
         const product = await window.electronAPI.getProduct(item.urunId);
-        if (product && newQuantity > product.stokMiktari) {
-            showNotification(`Yetersiz stok! ${item.urunAdi} için sadece ${product.stokMiktari} adet stok mevcut.`, 'error');
+
+        // Find specific size stock if applicable
+        let stockAvailable = product.stokMiktari;
+        if (product && product.bedenler && product.bedenler.length > 0 && item.beden) {
+            const sizeInfo = product.bedenler.find(b => b.beden === item.beden);
+            if (sizeInfo) {
+                stockAvailable = sizeInfo.miktar;
+            }
+        }
+
+        if (product && newQuantity > stockAvailable) {
+            showNotification(`Yetersiz stok! ${item.urunAdi} (${item.beden}) için sadece ${stockAvailable} adet stok mevcut.`, 'error');
             return;
         }
 
@@ -2095,7 +2105,7 @@ function addToCartWithProduct(product, selectedSize) {
         }
     }
 
-    if (stockAvailable === 0) {
+    if (stockAvailable <= 0) {
         showNotification(`Yetersiz stok! ${product.urunAdi} (${selectedSize}) için stok bulunmuyor.`, 'error');
         return;
     }
