@@ -4,8 +4,29 @@ const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
 const fs = require('fs');
 
-// GPU sorunlarını önlemek için donanım hızlandırmasını devre dışı bırak
+// Donanım kaynaklarını optimize et
 app.disableHardwareAcceleration();
+app.commandLine.appendSwitch('disable-gpu-rasterization');
+app.commandLine.appendSwitch('disable-gpu-compositing');
+app.commandLine.appendSwitch('disable-2d-canvas-clip-aa');
+app.commandLine.appendSwitch('proxy-server', 'direct://');
+app.commandLine.appendSwitch('proxy-bypass-list', '*');
+
+// Tekil örnek kilidi (Single Instance Lock)
+const gotTheLock = app.requestSingleInstanceLock();
+let mainWindow = null;
+
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Kullanıcı ikinci bir kopya açmaya çalışırsa ana pencereyi odakla
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+}
 
 const adapter = new FileSync('database.json');
 const db = low(adapter);
@@ -55,6 +76,36 @@ db.defaults({
     }
 }).write();
 
+// Migration: Convert old product format to new multi-size format
+function migrateProductsToNewFormat() {
+    const products = db.get('urunler').value();
+    let needsMigration = false;
+
+    products.forEach(product => {
+        if (!product.bedenler || !Array.isArray(product.bedenler)) {
+            needsMigration = true;
+            const bedenler = [{
+                beden: product.beden || '',
+                barkod: product.barkod || '',
+                miktar: product.stokMiktari || 0
+            }];
+
+            db.get('urunler')
+                .find({ id: product.id })
+                .assign({
+                    bedenler: bedenler
+                })
+                .write();
+        }
+    });
+
+    if (needsMigration) {
+        console.log('Products migrated to new multi-size format');
+    }
+}
+
+migrateProductsToNewFormat();
+
 // Create default admin user if not exists
 if (!db.get('kullanicilar').find({ kullaniciAdi: 'SametAslan' }).value()) {
     // Remove old admin user if exists
@@ -75,7 +126,7 @@ if (!db.get('kullanicilar').find({ kullaniciAdi: 'SametAslan' }).value()) {
 }
 
 function createWindow() {
-    const win = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
         webPreferences: {
@@ -85,10 +136,17 @@ function createWindow() {
         }
     });
 
-    win.loadFile('index.html');
+    mainWindow.loadFile('index.html');
+
+    // Open DevTools in development
+    // win.webContents.openDevTools();
 }
 
-app.whenReady().then(createWindow);
+app.on('ready', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+    }
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
@@ -121,16 +179,43 @@ ipcMain.handle('getProducts', () => {
 ipcMain.handle('searchProduct', (event, barcode) => {
     try {
         console.log(`Main process searching for barcode: ${barcode}`);
-        // Convert barcode to string to ensure consistent comparison
         const barcodeStr = String(barcode).trim();
 
-        // Find product where barcodes match, converting both to strings for comparison
-        const product = db.get('urunler')
-            .find(item => String(item.barkod).trim() === barcodeStr)
-            .value();
+        // Check if products have bedenler array (new format)
+        const products = db.get('urunler').value();
+        let foundProduct = null;
+        let foundBeden = null;
 
-        console.log('Product found in database:', product);
-        return product;
+        for (const product of products) {
+            // New format with bedenler array
+            if (product.bedenler && Array.isArray(product.bedenler)) {
+                const beden = product.bedenler.find(b => String(b.barkod).trim() === barcodeStr);
+                if (beden) {
+                    foundProduct = product;
+                    foundBeden = beden;
+                    break;
+                }
+            } else {
+                // Old format with single barkod
+                if (String(product.barkod).trim() === barcodeStr) {
+                    foundProduct = product;
+                    foundBeden = { beden: product.beden || '', barkod: product.barkod, miktar: product.stokMiktari };
+                    break;
+                }
+            }
+        }
+
+        if (foundProduct && foundBeden) {
+            return {
+                ...foundProduct,
+                selectedBeden: foundBeden.beden,
+                selectedBarkod: foundBeden.barkod,
+                selectedMiktar: foundBeden.miktar
+            };
+        }
+
+        console.log('Product not found in database');
+        return null;
     } catch (error) {
         console.error('Error searching for product:', error);
         throw error;
@@ -160,6 +245,7 @@ ipcMain.handle('saveSale', (event, data) => {
                 id: detailId,
                 satisId: saleId,
                 urunId: item.urunId,
+                beden: item.beden || '',
                 miktar: item.miktar,
                 birimFiyat: item.birimFiyat,
                 toplamFiyat: item.toplamFiyat
@@ -167,7 +253,22 @@ ipcMain.handle('saveSale', (event, data) => {
             .write();
         db.update('lastId.satisDetay', n => n + 1).write();
 
-        // Update stock
+        // Update stock based on format
+        const product = db.get('urunler').find({ id: item.urunId }).value();
+
+        if (product.bedenler && Array.isArray(product.bedenler)) {
+            // New format: update specific beden's miktar
+            const bedenIndex = product.bedenler.findIndex(b => b.beden === item.beden);
+            if (bedenIndex !== -1) {
+                db.get('urunler')
+                    .find({ id: item.urunId })
+                    .get(`bedenler[${bedenIndex}].miktar`)
+                    .update(n => n - item.miktar)
+                    .write();
+            }
+        }
+
+        // Top-level stock is ALWAYS the sum of all sizes (or the single stock for old format)
         db.get('urunler')
             .find({ id: item.urunId })
             .update('stokMiktari', n => n - item.miktar)
@@ -191,7 +292,8 @@ ipcMain.handle('getSales', (event, userId) => {
             const product = db.get('urunler')
                 .find({ id: detail.urunId })
                 .value();
-            return `${product.urunAdi}${product.beden ? ` (${product.beden})` : ''} (${detail.miktar})`;
+            const bedenInfo = detail.beden ? ` (${detail.beden})` : '';
+            return `${product.urunAdi}${bedenInfo} (${detail.miktar})`;
         });
 
         return {
@@ -204,11 +306,28 @@ ipcMain.handle('getSales', (event, userId) => {
 
 ipcMain.handle('addProduct', (event, product) => {
     const id = db.get('lastId.urunler').value() + 1;
+
+    // Calculate total stock from bedenler if available
+    let stokMiktari = product.stokMiktari || 0;
+    if (product.bedenler && Array.isArray(product.bedenler)) {
+        stokMiktari = product.bedenler.reduce((sum, b) => sum + (parseInt(b.miktar) || 0), 0);
+    }
+
+    // New format with bedenler array
+    const newProduct = {
+        id,
+        urunAdi: product.urunAdi,
+        barkod: product.barkod || '',
+        kategori: product.kategori,
+        alisFiyati: product.alisFiyati,
+        satisFiyati: product.satisFiyati,
+        stokMiktari: stokMiktari,
+        indirim: product.indirim || 0,
+        bedenler: product.bedenler || []
+    };
+
     db.get('urunler')
-        .push({
-            id,
-            ...product
-        })
+        .push(newProduct)
         .write();
     db.update('lastId.urunler', n => n + 1).write();
     return id;
@@ -216,19 +335,29 @@ ipcMain.handle('addProduct', (event, product) => {
 
 ipcMain.handle('updateProduct', (event, product) => {
     try {
+        const existingProduct = db.get('urunler').find({ id: product.id }).value();
+        if (!existingProduct) return false;
+
+        // Calculate total stock from bedenler if available
+        let stokMiktari = product.stokMiktari || 0;
+        if (product.bedenler && Array.isArray(product.bedenler)) {
+            stokMiktari = product.bedenler.reduce((sum, b) => sum + (parseInt(b.miktar) || 0), 0);
+        }
+
         db.get('urunler')
             .find({ id: product.id })
             .assign({
-                barkod: product.barkod,
                 urunAdi: product.urunAdi,
+                barkod: product.barkod || '',
                 kategori: product.kategori,
-                beden: product.beden,
                 alisFiyati: product.alisFiyati,
                 satisFiyati: product.satisFiyati,
-                stokMiktari: product.stokMiktari,
-                indirim: product.indirim || 0
+                stokMiktari: stokMiktari,
+                indirim: product.indirim || 0,
+                bedenler: product.bedenler || []
             })
             .write();
+
         return true;
     } catch (error) {
         console.error('Update product error:', error);
@@ -238,7 +367,21 @@ ipcMain.handle('updateProduct', (event, product) => {
 
 ipcMain.handle('getProduct', (event, id) => {
     try {
-        return db.get('urunler').find({ id: id }).value();
+        const product = db.get('urunler').find({ id: id }).value();
+
+        // Convert old format to new format for frontend compatibility
+        if (product && !product.bedenler) {
+            return {
+                ...product,
+                bedenler: [{
+                    beden: product.beden || '',
+                    barkod: product.barkod || '',
+                    miktar: product.stokMiktari
+                }]
+            };
+        }
+
+        return product;
     } catch (error) {
         console.error('Get product error:', error);
         return null;
@@ -259,16 +402,17 @@ ipcMain.handle('getDailyReport', () => {
         const saleIds = todaySales.map(sale => sale.id);
 
         // Calculate totals
-        const toplamSatis = todaySales.length; // Total sales count
-        const toplamCiro = todaySales.reduce((sum, sale) => sum + sale.toplamTutar, 0); // Total revenue
+        const toplamSatis = todaySales.length;
+        const toplamCiro = todaySales.reduce((sum, sale) => sum + sale.toplamTutar, 0);
 
-        // Get details of today's sales for calculating profit
+        // Get details of today's sales for calculating profit and product list
         const saleDetails = db.get('satisDetay')
             .filter(detail => saleIds.includes(detail.satisId))
             .value();
 
-        // Calculate total profit
+        // Calculate total profit and aggregate sold products
         let toplamKar = 0;
+        const satilanUrunler = [];
 
         saleDetails.forEach(detail => {
             const product = db.get('urunler')
@@ -278,13 +422,35 @@ ipcMain.handle('getDailyReport', () => {
             if (product) {
                 const kar = (product.satisFiyati - product.alisFiyati) * detail.miktar;
                 toplamKar += kar;
+
+                // Aggregate for the report
+                const existing = satilanUrunler.find(p => p.urunId === detail.urunId && p.beden === detail.beden);
+                if (existing) {
+                    existing.miktar += detail.miktar;
+                } else {
+                    // Get correct barcode for this size
+                    let barkod = product.barkod;
+                    if (product.bedenler && Array.isArray(product.bedenler)) {
+                        const sizeInfo = product.bedenler.find(b => b.beden === detail.beden);
+                        if (sizeInfo) barkod = sizeInfo.barkod;
+                    }
+
+                    satilanUrunler.push({
+                        urunId: detail.urunId,
+                        urunAdi: product.urunAdi,
+                        beden: detail.beden || '-',
+                        barkod: barkod || product.barkod || '-',
+                        miktar: detail.miktar,
+                        satisFiyati: product.satisFiyati
+                    });
+                }
             }
         });
 
-        return { toplamSatis, toplamCiro, toplamKar };
+        return { toplamSatis, toplamCiro, toplamKar, satilanUrunler };
     } catch (error) {
         console.error('Error getting daily report:', error);
-        return { toplamSatis: 0, toplamCiro: 0, toplamKar: 0 };
+        return { toplamSatis: 0, toplamCiro: 0, toplamKar: 0, satilanUrunler: [] };
     }
 });
 
@@ -393,6 +559,21 @@ ipcMain.handle('deleteSale', (event, saleId) => {
 
         // Restore stock for each product in the sale
         saleDetails.forEach(detail => {
+            const product = db.get('urunler').find({ id: detail.urunId }).value();
+
+            if (product.bedenler && Array.isArray(product.bedenler)) {
+                // New format: restore specific beden's miktar
+                const bedenIndex = product.bedenler.findIndex(b => b.beden === detail.beden);
+                if (bedenIndex !== -1) {
+                    db.get('urunler')
+                        .find({ id: detail.urunId })
+                        .get(`bedenler[${bedenIndex}].miktar`)
+                        .update(n => n + detail.miktar)
+                        .write();
+                }
+            }
+
+            // Top-level stock is ALWAYS the sum of all sizes
             db.get('urunler')
                 .find({ id: detail.urunId })
                 .update('stokMiktari', n => n + detail.miktar)
@@ -468,8 +649,13 @@ ipcMain.handle('printSaleReceipt', (event, saleData) => {
         printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHTML)}`);
         printWindow.webContents.on('did-finish-load', () => {
             printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
-                printWindow.close();
+                printWindow.destroy();
             });
+
+            // Güvenlik önlemi: 30 saniye sonra hala kapanmadıysa zorla kapat
+            setTimeout(() => {
+                if (!printWindow.isDestroyed()) printWindow.destroy();
+            }, 30000);
         });
         return { success: true };
     } catch (error) {
@@ -522,13 +708,29 @@ ipcMain.handle('printEndOfDayReport', (event, reportData) => {
             <div class="row"><span class="label">Toplam Ciro:</span> <span>${Number(reportData.toplamCiro).toFixed(2)} TL</span></div>
             <div class="row"><span class="label">Toplam Kar:</span> <span>${Number(reportData.toplamKar).toFixed(2)} TL</span></div>
             <div class="line"></div>
+            <div class="center"><b>SATILAN ÜRÜNLER</b></div>
+            <div class="line"></div>
+            ${reportData.satilanUrunler && reportData.satilanUrunler.length > 0 ? reportData.satilanUrunler.map(item => `
+                <div style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <b>${item.urunAdi}</b>
+                        <b>${(item.satisFiyati * item.miktar).toFixed(2)} TL</b>
+                    </div>
+                    <div style="font-size: 10px; display: flex; justify-content: space-between;">
+                        <span>Beden: ${item.beden}</span>
+                        <span>Adet: ${item.miktar} x ${item.satisFiyati.toFixed(2)} TL</span>
+                    </div>
+                    <div style="font-size: 10px;">Barkod: ${item.barkod}</div>
+                </div>
+            `).join('') : '<div class="center">Satış yok</div>'}
+            <div class="line"></div>
         </body>
         </html>
         `;
         printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(reportHTML)}`);
         printWindow.webContents.on('did-finish-load', () => {
             printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
-                printWindow.close();
+                printWindow.destroy();
             });
         });
         return { success: true };
@@ -579,7 +781,7 @@ ipcMain.handle('printProductLabel', (event, labelData) => {
         printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(labelHTML)}`);
         printWindow.webContents.on('did-finish-load', () => {
             printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
-                printWindow.close();
+                printWindow.destroy();
             });
         });
         return { success: true };
