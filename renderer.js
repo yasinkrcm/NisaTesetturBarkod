@@ -220,21 +220,43 @@ function setupFormEventListeners() {
             let totalStok = 0;
 
             if (kategori === 'Kıyafet') {
+                // Renk seçimi zorunlu
+                const selectedColors = getSelectedColors();
+
+                if (selectedColors.length === 0) {
+                    showNotification('En az bir renk seçmelisiniz!', 'error');
+                    return;
+                }
+
                 const checkedSizes = document.querySelectorAll('.size-checkbox:checked');
+
+                // Her beden+renk kombinasyonu için ayrı kayıt
                 checkedSizes.forEach(checkbox => {
                     const size = checkbox.value;
-                    const stockInput = document.getElementById(`stock_${size}`);
-                    const barcodeInput = document.getElementById(`barcode_val_${size}`);
-                    const stockVal = parseInt(stockInput.value) || 0;
-                    if (stockVal > 0) {
-                        bedenler.push({
-                            beden: size,
-                            barkod: barcodeInput ? barcodeInput.value : document.getElementById('newBarkod').value,
-                            miktar: stockVal
-                        });
-                        totalStok += stockVal;
-                    }
+                    selectedColors.forEach(color => {
+                        const key = `${size}_${color}`;
+                        const stockInput = document.getElementById(`stock_${key}`);
+                        const barcodeInput = document.getElementById(`barcode_val_${key}`);
+                        const stockVal = parseInt(stockInput?.value) || 0;
+
+                        if (stockVal > 0) {
+                            bedenler.push({
+                                beden: size,
+                                renk: color,
+                                barkod: barcodeInput ? barcodeInput.value : generateBarcodeNumber(),
+                                miktar: stockVal
+                            });
+                            totalStok += stockVal;
+                        }
+                    });
                 });
+                                barkod: barcodeInput ? barcodeInput.value : document.getElementById('newBarkod').value,
+                                miktar: stockVal
+                            });
+                            totalStok += stockVal;
+                        }
+                    });
+                }
 
                 if (bedenler.length === 0) {
                     showNotification('En az bir beden ve miktar seçmelisiniz!', 'error');
@@ -818,7 +840,7 @@ async function showProducts() {
                             </thead>
                             <tbody id="productTableBody" class="bg-white divide-y divide-gray-200">
                                 ${products.map(p => `
-                                    <tr class="hover:bg-gray-50 transition-colors" data-search="${p.urunAdi} ${p.barkod} ${p.bedenler ? p.bedenler.map(b => `${b.barkod} ${b.beden}`).join(' ') : ''}" data-id="${p.id}">
+                                    <tr class="hover:bg-gray-50 transition-colors" data-search="${p.urunAdi} ${p.barkod} ${p.bedenler ? p.bedenler.map(b => `${b.barkod} ${b.beden} ${b.renk || ''}`).join(' ') : ''}" data-id="${p.id}">
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
                                                 <i class="fas fa-barcode text-gray-400 mr-2"></i>
@@ -836,7 +858,14 @@ async function showProducts() {
                                         <td class="px-6 py-4">
                                             <div class="flex flex-wrap gap-1">
                                                 ${p.bedenler && p.bedenler.length > 0
-                ? p.bedenler.map(b => `<span class="inline-block bg-gray-100 text-[10px] whitespace-nowrap rounded px-1.5 py-0.5 border border-gray-200">${b.beden} beden ${b.miktar}</span>`).join('')
+                ? p.bedenler.map(b => `
+                    <div class="mb-1">
+                        <span class="inline-block bg-gray-100 text-[10px] whitespace-nowrap rounded px-1.5 py-0.5 border border-gray-200">
+                            ${b.beden} beden ${b.miktar}
+                            ${b.renk ? `<span class="ml-1 px-1 py-0.5 bg-purple-100 text-purple-700 rounded">${b.renk}</span>` : ''}
+                        </span>
+                    </div>
+                `).join('')
                 : `<span class="inline-block bg-gray-100 text-[10px] whitespace-nowrap rounded px-1.5 py-0.5 border border-gray-200">${p.beden || '-'}</span>`}
                                             </div>
                                         </td>
@@ -1096,9 +1125,33 @@ function addProduct() {
 
                     <div id="newSizeSelectionDiv" class="hidden space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Renk Seçimi (Zorunlu)</label>
+                            <div id="colorSelectionDiv" class="space-y-2 mt-2">
+                                <div class="text-xs text-gray-500 mb-2">Genel Renkler:</div>
+                                <div class="flex flex-wrap gap-2">
+                                    ${['Siyah', 'Beyaz', 'Kırmızı', 'Mavi', 'Yeşil', 'Sarı', 'Turuncu', 'Pembe', 'Mor', 'Lacivert', 'Bej', 'Gri', 'Kahverengi', 'Bordo', 'Turkuaz'].map(renk => `
+                                        <label class="inline-flex items-center p-1 px-2 bg-white border rounded hover:bg-indigo-50 cursor-pointer transition-colors text-xs">
+                                            <input type="checkbox" class="color-checkbox form-checkbox h-3 w-3 text-indigo-600" value="${renk}">
+                                            <span class="ml-1 text-xs text-gray-700">${renk}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                                <div class="mt-2">
+                                    <label class="block text-xs text-gray-600 mb-1">Diğer Renk Ekle:</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="customColorInput" placeholder="Renk adı girin..." class="flex-1 px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none">
+                                        <button type="button" onclick="addCustomColor()" class="px-3 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition">
+                                            <i class="fas fa-plus"></i> Ekle
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="selectedColorsContainer" class="flex flex-wrap gap-1 mt-2"></div>
+                            </div>
+                        </div>
+                        <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Beden Seçimi (Sayısal)</label>
                             <div class="flex flex-wrap gap-2">
-                                ${[38, 40, 42, 44, 46, 48, 50, 52, 54].map(size => `
+                                ${[36, 38, 40, 42, 44, 46, 48, 50, 52, 54].map(size => `
                                     <label class="inline-flex items-center p-2 bg-white border rounded hover:bg-indigo-50 cursor-pointer transition-colors">
                                         <input type="checkbox" class="size-checkbox form-checkbox h-4 w-4 text-indigo-600" value="${size}" onchange="updateStockInputs()">
                                         <span class="ml-2 text-sm text-gray-700">${size}</span>
@@ -1120,8 +1173,8 @@ function addProduct() {
                     </div>
 
                     <div id="newStockQuantityDiv" class="hidden space-y-2">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">Beden Stok Miktarları</label>
-                        <div id="stockInputContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Beden-Renk Kombinasyonları</label>
+                        <div id="stockInputContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             <!-- Stock inputs will be generated here -->
                         </div>
                     </div>
@@ -1172,6 +1225,56 @@ function toggleSizeSelection(category) {
     }
 }
 
+// Helper to toggle color selection
+function toggleColorSelection() {
+    const checkbox = document.getElementById('enableColorSelection');
+    const colorDiv = document.getElementById('colorSelectionDiv');
+
+    if (checkbox.checked) {
+        colorDiv.classList.remove('hidden');
+    } else {
+        colorDiv.classList.add('hidden');
+    }
+}
+
+// Helper to add custom color
+function addCustomColor() {
+    const input = document.getElementById('customColorInput');
+    const colorName = input.value.trim();
+
+    if (!colorName) {
+        showNotification('Lütfen bir renk adı girin!', 'error');
+        return;
+    }
+
+    // Seçilen renkleri göster
+    const container = document.getElementById('selectedColorsContainer');
+    const colorTag = document.createElement('span');
+    colorTag.className = 'inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs';
+    colorTag.innerHTML = `
+        ${colorName}
+        <button type="button" onclick="this.parentElement.remove()" class="ml-1 text-indigo-500 hover:text-indigo-700">
+            <i class="fas fa-times"></i>
+        </button>
+        <input type="hidden" class="selected-color-input" value="${colorName}">
+    `;
+    container.appendChild(colorTag);
+
+    input.value = '';
+}
+
+// Helper to get selected colors
+function getSelectedColors() {
+    const colors = [];
+    document.querySelectorAll('.color-checkbox:checked').forEach(checkbox => {
+        colors.push(checkbox.value);
+    });
+    document.querySelectorAll('.selected-color-input').forEach(input => {
+        colors.push(input.value);
+    });
+    return [...new Set(colors)]; // Remove duplicates
+}
+
 // Update stock inputs based on checked sizes
 // Helper to toggle manual/auto barcode entry
 function updateBarcodeUI() {
@@ -1195,6 +1298,7 @@ function updateStockInputs() {
     const container = document.getElementById('stockInputContainer');
     const checkedSizes = document.querySelectorAll('.size-checkbox:checked');
     const autoGen = document.getElementById('autoGenerateBarcode').checked;
+    const enableColors = true; // Renk seçimi her zaman aktif
     const currentValues = {};
 
     // Mevcut değerleri ve barkodları koru
@@ -1204,37 +1308,91 @@ function updateStockInputs() {
 
     container.innerHTML = '';
 
+    // Seçilen renkleri al
+    const selectedColors = [];
+    document.querySelectorAll('.color-checkbox:checked').forEach(cb => selectedColors.push(cb.value));
+    document.querySelectorAll('.selected-color-input').forEach(input => selectedColors.push(input.value));
+
     checkedSizes.forEach(checkbox => {
         const size = checkbox.value;
-        const stockVal = currentValues[`stock_${size}`] || '';
-        // Her beden için benzersiz barkod üret veya mevcut olanı koru
-        const barcodeVal = currentValues[`barcode_val_${size}`] || generateBarcodeNumber();
 
-        const div = document.createElement('div');
-        div.className = 'bg-gray-50 p-2 rounded border border-gray-200 space-y-1';
+        // Eğer renk seçimi aktifse, her beden+renk için ayrı kart oluştur
+        if (enableColors && selectedColors.length > 0) {
+            selectedColors.forEach(color => {
+                const key = `${size}_${color}`;
+                const stockVal = currentValues[`stock_${key}`] || '';
+                const barcodeVal = currentValues[`barcode_val_${key}`] || generateBarcodeNumber();
 
-        let barcodeHTML = '';
-        if (autoGen) {
-            barcodeHTML = `
-                <div class="text-[10px] text-gray-400 truncate">Barkod: ${barcodeVal}</div>
-                <input type="hidden" id="barcode_val_${size}" value="${barcodeVal}">
-            `;
+                const div = document.createElement('div');
+                div.className = 'bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2 shadow-sm';
+
+                let barcodeHTML = '';
+                if (autoGen) {
+                    barcodeHTML = `
+                        <div class="text-[10px] text-gray-400">Barkod: ${barcodeVal}</div>
+                        <input type="hidden" id="barcode_val_${key}" value="${barcodeVal}">
+                    `;
+                } else {
+                    barcodeHTML = `
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Barkod</label>
+                            <input type="text" id="barcode_val_${key}" value="${currentValues[`barcode_val_${key}`] || ''}"
+                                placeholder="Barkod girin"
+                                class="w-full px-2 py-1.5 text-xs border rounded focus:border-indigo-500 outline-none mt-1" required>
+                        </div>
+                    `;
+                }
+
+                div.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-gray-200 pb-2">
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold">${color}</span>
+                        <span class="text-sm font-bold text-indigo-700">${size} Beden</span>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase">Stok Miktarı</label>
+                        <input type="number" id="stock_${key}" value="${stockVal}" placeholder="Stok"
+                            class="w-full px-2 py-1.5 text-xs border rounded focus:border-indigo-500 outline-none mt-1" required>
+                    </div>
+                    ${barcodeHTML}
+                `;
+                container.appendChild(div);
+            });
         } else {
-            barcodeHTML = `
-                <div class="text-[10px] font-bold text-gray-500 uppercase px-1">Barkod</div>
-                <input type="text" id="barcode_val_${size}" value="${currentValues[`barcode_val_${size}`] || ''}" 
-                    placeholder="Barkod girin" 
-                    class="w-full px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none" required>
-            `;
-        }
+            // Renk seçimi yoksa, sadece beden
+            const stockVal = currentValues[`stock_${size}`] || '';
+            const barcodeVal = currentValues[`barcode_val_${size}`] || generateBarcodeNumber();
 
-        div.innerHTML = `
-            <div class="text-xs font-bold text-gray-600">${size} Beden</div>
-            <input type="number" id="stock_${size}" value="${stockVal}" placeholder="Stok" 
-                class="w-full px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none" required>
-            ${barcodeHTML}
-        `;
-        container.appendChild(div);
+            const div = document.createElement('div');
+            div.className = 'bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2 shadow-sm';
+
+            let barcodeHTML = '';
+            if (autoGen) {
+                barcodeHTML = `
+                    <div class="text-[10px] text-gray-400">Barkod: ${barcodeVal}</div>
+                    <input type="hidden" id="barcode_val_${size}" value="${barcodeVal}">
+                `;
+            } else {
+                barcodeHTML = `
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase">Barkod</label>
+                        <input type="text" id="barcode_val_${size}" value="${currentValues[`barcode_val_${size}`] || ''}"
+                            placeholder="Barkod girin"
+                            class="w-full px-2 py-1.5 text-xs border rounded focus:border-indigo-500 outline-none mt-1" required>
+                    </div>
+                `;
+            }
+
+            div.innerHTML = `
+                <div class="text-sm font-bold text-gray-600 border-b border-gray-200 pb-2">${size} Beden</div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">Stok Miktarı</label>
+                    <input type="number" id="stock_${size}" value="${stockVal}" placeholder="Stok"
+                        class="w-full px-2 py-1.5 text-xs border rounded focus:border-indigo-500 outline-none mt-1" required>
+                </div>
+                ${barcodeHTML}
+            `;
+            container.appendChild(div);
+        }
     });
 }
 
@@ -1271,6 +1429,10 @@ function showSizeDetails(bedenler, urunAdi) {
                                         ${b.beden}
                                     </div>
                                     <div>
+                                        ${b.renk ? `
+                                            <p class="text-[10px] text-gray-400 font-bold uppercase">Renk</p>
+                                            <span class="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs mb-1">${b.renk}</span>
+                                        ` : ''}
                                         <p class="text-[10px] text-gray-400 font-bold uppercase">Barkod</p>
                                         <p class="text-xs font-mono text-gray-600">${b.barkod || '-'}</p>
                                     </div>
@@ -1366,6 +1528,7 @@ async function getDailyReport() {
                                         <th class="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase">Barkod</th>
                                         <th class="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase">Ürün</th>
                                         <th class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase">Beden</th>
+                                        <th class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase">Renk</th>
                                         <th class="px-4 py-3 text-center text-[10px] font-bold text-gray-500 uppercase">Adet</th>
                                         <th class="px-4 py-3 text-right text-[10px] font-bold text-gray-500 uppercase">Fiyat</th>
                                     </tr>
@@ -1378,12 +1541,15 @@ async function getDailyReport() {
                                             <td class="px-4 py-3 whitespace-nowrap text-center text-xs text-gray-600">
                                                 <span class="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-medium">${item.beden}</span>
                                             </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-center text-xs text-gray-600">
+                                                ${item.renk ? `<span class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">${item.renk}</span>` : '-'}
+                                            </td>
                                             <td class="px-4 py-3 whitespace-nowrap text-center text-xs font-bold text-indigo-600">${item.miktar}</td>
                                             <td class="px-4 py-3 whitespace-nowrap text-right text-xs font-bold text-gray-900">${(item.satisFiyati * item.miktar).toFixed(2)} TL</td>
                                         </tr>
                                     `).join('') : `
                                         <tr>
-                                            <td colspan="5" class="px-4 py-8 text-center text-gray-500 italic text-sm">Henüz satış yapılmadı.</td>
+                                            <td colspan="6" class="px-4 py-8 text-center text-gray-500 italic text-sm">Henüz satış yapılmadı.</td>
                                         </tr>
                                     `}
                                 </tbody>
@@ -1665,15 +1831,47 @@ async function editProduct(id) {
                                 <option value="Ev Tekstili" ${product.kategori === 'Ev Tekstili' ? 'selected' : ''}>Ev Tekstili</option>
                             </select>
                         </div>
-                        
+
                         <div id="editSizeSelectionDiv" class="${product.kategori === 'Kıyafet' ? '' : 'hidden'}">
+                            <!-- Renk Seçimi -->
+                            <div class="mb-3">
+                                <label class="flex items-center text-sm font-bold text-gray-700 mb-2">
+                                    <input type="checkbox" id="editEnableColorSelection" onchange="toggleEditColorSelection()" class="mr-2 rounded form-checkbox h-4 w-4 text-indigo-600" ${product.bedenler && product.bedenler.some(b => b.renk) ? 'checked' : ''}>
+                                    Renk Seçimi Aktif
+                                </label>
+                                <div id="editColorSelectionDiv" class="${product.bedenler && product.bedenler.some(b => b.renk) ? '' : 'hidden'} space-y-2 mt-2">
+                                    <div class="text-xs text-gray-500 mb-2">Genel Renkler:</div>
+                                    <div class="flex flex-wrap gap-2">
+                                        ${['Siyah', 'Beyaz', 'Kırmızı', 'Mavi', 'Yeşil', 'Sarı', 'Turuncu', 'Pembe', 'Mor', 'Lacivert', 'Bej', 'Gri', 'Kahverengi', 'Bordo', 'Turkuaz'].map(renk => {
+                                            const isChecked = product.bedenler && product.bedenler.some(b => b.renk === renk);
+                                            return `
+                                                <label class="inline-flex items-center p-1 px-2 bg-white border rounded hover:bg-indigo-50 cursor-pointer transition-colors text-xs">
+                                                    <input type="checkbox" class="edit-color-checkbox form-checkbox h-3 w-3 text-indigo-600" value="${renk}" ${isChecked ? 'checked' : ''} onchange="updateEditStockInputs()">
+                                                    <span class="ml-1 text-xs text-gray-700">${renk}</span>
+                                                </label>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                    <div class="mt-2">
+                                        <label class="block text-xs text-gray-600 mb-1">Diğer Renk Ekle:</label>
+                                        <div class="flex gap-2">
+                                            <input type="text" id="editCustomColorInput" placeholder="Renk adı girin..." class="flex-1 px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none">
+                                            <button type="button" onclick="addEditCustomColor()" class="px-3 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition">
+                                                <i class="fas fa-plus"></i> Ekle
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="editSelectedColorsContainer" class="flex flex-wrap gap-1 mt-2"></div>
+                                </div>
+                            </div>
+
                             <label class="block text-gray-700 text-sm font-bold mb-2">Bedenler</label>
-                            <div class="grid grid-cols-4 gap-2 bg-gray-50 p-3 rounded-lg border">
+                            <div class="grid grid-cols-5 gap-2 bg-gray-50 p-3 rounded-lg border">
                                 ${['38', '40', '42', '44', '46', '48', '50', '52', '54', '1', '2', '3', '4', '5', '6'].map(size => {
             const isChecked = product.bedenler && product.bedenler.some(b => b.beden === size);
             return `
                                         <label class="flex items-center space-x-1 text-xs cursor-pointer hover:text-indigo-600">
-                                            <input type="checkbox" value="${size}" class="edit-size-checkbox rounded text-indigo-600" 
+                                            <input type="checkbox" value="${size}" class="edit-size-checkbox rounded text-indigo-600"
                                                 onchange="updateEditStockInputs()" ${isChecked ? 'checked' : ''}>
                                             <span>${size}</span>
                                         </label>
@@ -1737,18 +1935,47 @@ async function editProduct(id) {
 
                     if (kategori === 'Kıyafet') {
                         const checkedSizes = document.querySelectorAll('.edit-size-checkbox:checked');
+                        const enableColors = document.getElementById('editEnableColorSelection').checked;
+                        const selectedColors = [];
+
+                        // Seçilen renkleri al
+                        document.querySelectorAll('.edit-color-checkbox:checked').forEach(cb => selectedColors.push(cb.value));
+                        document.querySelectorAll('.edit-selected-color-input').forEach(input => selectedColors.push(input.value));
+
                         checkedSizes.forEach(checkbox => {
                             const size = checkbox.value;
-                            const stockInput = document.getElementById(`edit_stock_${size}`);
-                            const barcodeInput = document.getElementById(`edit_barcode_val_${size}`);
-                            const stockVal = parseInt(stockInput.value) || 0;
-                            if (stockVal >= 0) { // Allow 0 stock
-                                bedenler.push({
-                                    beden: size,
-                                    barkod: barcodeInput ? barcodeInput.value : document.getElementById('editBarkod').value,
-                                    miktar: stockVal
+
+                            if (enableColors && selectedColors.length > 0) {
+                                // Her beden+renk kombinasyonu için
+                                selectedColors.forEach(color => {
+                                    const key = `${size}_${color}`;
+                                    const stockInput = document.getElementById(`edit_stock_${key}`);
+                                    const barcodeInput = document.getElementById(`edit_barcode_val_${key}`);
+                                    const stockVal = stockInput ? parseInt(stockInput.value) || 0 : 0;
+
+                                    if (stockVal >= 0) {
+                                        bedenler.push({
+                                            beden: size,
+                                            renk: color,
+                                            barkod: barcodeInput ? barcodeInput.value : document.getElementById('editBarkod').value,
+                                            miktar: stockVal
+                                        });
+                                        totalStok += stockVal;
+                                    }
                                 });
-                                totalStok += stockVal;
+                            } else {
+                                // Renk yoksa, sadece beden
+                                const stockInput = document.getElementById(`edit_stock_${size}`);
+                                const barcodeInput = document.getElementById(`edit_barcode_val_${size}`);
+                                const stockVal = stockInput ? parseInt(stockInput.value) || 0 : 0;
+                                if (stockVal >= 0) {
+                                    bedenler.push({
+                                        beden: size,
+                                        barkod: barcodeInput ? barcodeInput.value : document.getElementById('editBarkod').value,
+                                        miktar: stockVal
+                                    });
+                                    totalStok += stockVal;
+                                }
                             }
                         });
                     } else {
@@ -1810,6 +2037,7 @@ function toggleEditSizeSelection(category) {
 function updateEditStockInputs(initialBedenler = null) {
     const container = document.getElementById('editStockInputContainer');
     const checkedSizes = document.querySelectorAll('.edit-size-checkbox:checked');
+    const enableColors = document.getElementById('editEnableColorSelection')?.checked || false;
     const currentValues = {};
 
     // Mevcut değerleri ve barkodları koru (initialBedenler yoksa)
@@ -1820,29 +2048,105 @@ function updateEditStockInputs(initialBedenler = null) {
     } else {
         // İlk yüklemede initialBedenler kullan
         initialBedenler.forEach(b => {
-            currentValues[`edit_stock_${b.beden}`] = b.miktar;
-            currentValues[`edit_barcode_val_${b.beden}`] = b.barkod;
+            const key = b.renk ? `${b.beden}_${b.renk}` : b.beden;
+            currentValues[`edit_stock_${key}`] = b.miktar;
+            currentValues[`edit_barcode_val_${key}`] = b.barkod;
         });
     }
 
     container.innerHTML = '';
 
+    // Seçilen renkleri al
+    const selectedColors = [];
+    document.querySelectorAll('.edit-color-checkbox:checked').forEach(cb => selectedColors.push(cb.value));
+    document.querySelectorAll('.edit-selected-color-input').forEach(input => selectedColors.push(input.value));
+
     checkedSizes.forEach(checkbox => {
         const size = checkbox.value;
-        const stockVal = currentValues[`edit_stock_${size}`] || '';
-        const barcodeVal = currentValues[`edit_barcode_val_${size}`] || generateBarcodeNumber();
 
-        const div = document.createElement('div');
-        div.className = 'bg-gray-50 p-2 rounded border border-gray-200 space-y-1';
-        div.innerHTML = `
-            <div class="text-xs font-bold text-gray-600">${size} Beden</div>
-            <input type="number" id="edit_stock_${size}" value="${stockVal}" placeholder="Stok" 
-                class="w-full px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none" required>
-            <div class="text-[10px] text-gray-400 truncate">Barkod: ${barcodeVal}</div>
-            <input type="hidden" id="edit_barcode_val_${size}" value="${barcodeVal}">
-        `;
-        container.appendChild(div);
+        // Eğer renk seçimi aktifse, her beden+renk için ayrı kart oluştur
+        if (enableColors && selectedColors.length > 0) {
+            selectedColors.forEach(color => {
+                const key = `${size}_${color}`;
+                const stockVal = currentValues[`edit_stock_${key}`] || '';
+                const barcodeVal = currentValues[`edit_barcode_val_${key}`] || generateBarcodeNumber();
+
+                const div = document.createElement('div');
+                div.className = 'bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2 shadow-sm';
+                div.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-gray-200 pb-2">
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold">${color}</span>
+                        <span class="text-sm font-bold text-indigo-700">${size} Beden</span>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase">Stok Miktarı</label>
+                        <input type="number" id="edit_stock_${key}" value="${stockVal}" placeholder="Stok"
+                            class="w-full px-2 py-1.5 text-xs border rounded focus:border-indigo-500 outline-none mt-1" required>
+                    </div>
+                    <div class="text-[10px] text-gray-400 truncate">Barkod: ${barcodeVal}</div>
+                    <input type="hidden" id="edit_barcode_val_${key}" value="${barcodeVal}">
+                `;
+                container.appendChild(div);
+            });
+        } else {
+            // Renk seçimi yoksa, sadece beden
+            const stockVal = currentValues[`edit_stock_${size}`] || '';
+            const barcodeVal = currentValues[`edit_barcode_val_${size}`] || generateBarcodeNumber();
+
+            const div = document.createElement('div');
+            div.className = 'bg-gray-50 p-2 rounded border border-gray-200 space-y-1';
+            div.innerHTML = `
+                <div class="text-xs font-bold text-gray-600">${size} Beden</div>
+                <input type="number" id="edit_stock_${size}" value="${stockVal}" placeholder="Stok"
+                    class="w-full px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none" required>
+                <div class="text-[10px] text-gray-400 truncate">Barkod: ${barcodeVal}</div>
+                <input type="hidden" id="edit_barcode_val_${size}" value="${barcodeVal}">
+            `;
+            container.appendChild(div);
+        }
     });
+}
+
+// Toggle color selection in edit form
+function toggleEditColorSelection() {
+    const checkbox = document.getElementById('editEnableColorSelection');
+    const colorDiv = document.getElementById('editColorSelectionDiv');
+
+    if (checkbox.checked) {
+        colorDiv.classList.remove('hidden');
+    } else {
+        colorDiv.classList.add('hidden');
+    }
+
+    // Refresh stock inputs
+    updateEditStockInputs();
+}
+
+// Add custom color in edit form
+function addEditCustomColor() {
+    const input = document.getElementById('editCustomColorInput');
+    const colorName = input.value.trim();
+
+    if (!colorName) {
+        showNotification('Lütfen bir renk adı girin!', 'error');
+        return;
+    }
+
+    // Seçilen renkleri göster
+    const container = document.getElementById('editSelectedColorsContainer');
+    const colorTag = document.createElement('span');
+    colorTag.className = 'inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs';
+    colorTag.innerHTML = `
+        ${colorName}
+        <button type="button" onclick="this.parentElement.remove(); updateEditStockInputs();" class="ml-1 text-indigo-500 hover:text-indigo-700">
+            <i class="fas fa-times"></i>
+        </button>
+        <input type="hidden" class="edit-selected-color-input" value="${colorName}">
+    `;
+    container.appendChild(colorTag);
+
+    input.value = '';
+    updateEditStockInputs();
 }
 
 // Function to delete a product
@@ -2011,9 +2315,15 @@ async function handleBarcodeInput(e) {
             const product = await window.electronAPI.searchProduct(barcode);
 
             if (product) {
-                // Her bedenin ayrı barkodu olduğu için selectedBeden varsa direkt ekle
+                // Her beden+renk kombinasyonunun ayrı barkodu olduğu için selectedBeden varsa direkt ekle
                 if (product.selectedBeden) {
-                    addToCartWithProduct(product, product.selectedBeden);
+                    // Eğer barkod spesifik bir beden+renk kombinasyonuna aitse
+                    const matchingBeden = product.bedenler && product.bedenler.find(b => b.barkod === barcode);
+                    if (matchingBeden) {
+                        addToCartWithProduct(product, matchingBeden.beden, matchingBeden.renk || '');
+                    } else {
+                        addToCartWithProduct(product, product.selectedBeden, product.selectedRenk || '');
+                    }
                 } else if (product.bedenler && product.bedenler.length > 1) {
                     // Eğer belirli bir beden seçili gelmediyse ve birden fazla beden varsa diyaloğu göster
                     showSizeSelectionDialog(product);
@@ -2023,8 +2333,11 @@ async function handleBarcodeInput(e) {
                     const selectedSize = product.bedenler && product.bedenler.length === 1
                         ? product.bedenler[0].beden
                         : (product.beden || '');
+                    const selectedRenk = product.bedenler && product.bedenler.length === 1
+                        ? (product.bedenler[0].renk || '')
+                        : '';
 
-                    addToCartWithProduct(product, selectedSize);
+                    addToCartWithProduct(product, selectedSize, selectedRenk);
                 }
 
                 // Clear input
@@ -2052,20 +2365,25 @@ function showSizeSelectionDialog(product) {
     modal.id = 'sizeSelectionModal';
 
     modal.innerHTML = `
-        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full">
-            <h3 class="text-xl font-bold mb-4 text-gray-800">Beden Seçiniz</h3>
-            <p class="text-gray-600 mb-4">${product.urunAdi} için beden seçin:</p>
-            <div class="grid grid-cols-3 gap-2 mb-6">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 text-gray-800">Beden/Renk Seçiniz</h3>
+            <p class="text-gray-600 mb-4">${product.urunAdi} için seçim yapın:</p>
+            <div class="grid grid-cols-2 gap-2 mb-6">
                 ${product.bedenler.map(b => `
-                    <button onclick="selectProductSize(${product.id}, '${b.beden}')" 
-                        class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors font-medium ${b.miktar <= 0 ? 'opacity-50 cursor-not-allowed' : ''}"
+                    <button onclick="selectProductSize(${product.id}, '${b.beden}', '${b.renk || ''}')"
+                        class="px-3 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors font-medium text-left ${b.miktar <= 0 ? 'opacity-50 cursor-not-allowed' : ''}"
                         ${b.miktar <= 0 ? 'disabled' : ''}>
-                        ${b.beden}
-                        <div class="text-[10px] text-gray-500">${b.miktar} st.</div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                ${b.renk ? `<div class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold inline-block mb-1">${b.renk}</div>` : ''}
+                                <div class="text-sm font-bold">${b.beden} Beden</div>
+                            </div>
+                            <div class="text-[10px] text-gray-500">${b.miktar} st.</div>
+                        </div>
                     </button>
                 `).join('')}
             </div>
-            <button onclick="document.getElementById('sizeSelectionModal').remove()" 
+            <button onclick="document.getElementById('sizeSelectionModal').remove()"
                 class="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors">
                 İptal
             </button>
@@ -2075,11 +2393,11 @@ function showSizeSelectionDialog(product) {
 }
 
 // Handler for size selection from dialog
-async function selectProductSize(productId, size) {
+async function selectProductSize(productId, size, renk = '') {
     try {
         const product = await window.electronAPI.getProduct(productId);
         if (product) {
-            addToCartWithProduct(product, size);
+            addToCartWithProduct(product, size, renk);
             document.getElementById('sizeSelectionModal').remove();
 
             // Refocus barcode input
@@ -2095,30 +2413,45 @@ async function selectProductSize(productId, size) {
 }
 
 // Logic to add a specific product/size to cart
-function addToCartWithProduct(product, selectedSize) {
-    // Check stock for specific size if applicable
+function addToCartWithProduct(product, selectedSize, selectedRenk = '') {
+    // Check stock for specific size+color combination if applicable
     let stockAvailable = product.stokMiktari;
+    let sizeInfo = null;
+
     if (product.bedenler && product.bedenler.length > 0 && selectedSize) {
-        const sizeInfo = product.bedenler.find(b => b.beden === selectedSize);
+        // Beden+renk kombinasyonunu bul
+        sizeInfo = product.bedenler.find(b => b.beden === selectedSize && (selectedRenk ? b.renk === selectedRenk : !b.renk));
+        if (!sizeInfo && selectedRenk) {
+            // Eğer tam eşleşme yoksa, sadece beden ile eşleşen var mı kontrol et
+            sizeInfo = product.bedenler.find(b => b.beden === selectedSize);
+        }
         if (sizeInfo) {
             stockAvailable = sizeInfo.miktar;
         }
     }
 
     if (stockAvailable <= 0) {
-        showNotification(`Yetersiz stok! ${product.urunAdi} (${selectedSize}) için stok bulunmuyor.`, 'error');
+        const displayText = selectedRenk ? `${selectedSize} / ${selectedRenk}` : selectedSize;
+        showNotification(`Yetersiz stok! ${product.urunAdi} (${displayText}) için stok bulunmuyor.`, 'error');
         return;
     }
 
-    const existingIndex = cart.findIndex(item => item.urunId === product.id && item.beden === selectedSize);
+    // Cart'ta aynı beden+renk kombinasyonunu ara
+    const existingIndex = cart.findIndex(item =>
+        item.urunId === product.id &&
+        item.beden === selectedSize &&
+        (selectedRenk ? item.renk === selectedRenk : !item.renk)
+    );
 
     if (existingIndex !== -1) {
         if (cart[existingIndex].miktar + 1 > stockAvailable) {
-            showNotification(`Yetersiz stok! ${product.urunAdi} (${selectedSize}) için sadece ${stockAvailable} adet stok mevcut.`, 'error');
+            const displayText = selectedRenk ? `${selectedSize} / ${selectedRenk}` : selectedSize;
+            showNotification(`Yetersiz stok! ${product.urunAdi} (${displayText}) için sadece ${stockAvailable} adet stok mevcut.`, 'error');
             return;
         }
         updateItemQuantity(existingIndex, cart[existingIndex].miktar + 1);
-        showNotification(`${product.urunAdi} (${selectedSize}) sepete eklendi!`, 'success');
+        const displayText = selectedRenk ? `${selectedSize} / ${selectedRenk}` : selectedSize;
+        showNotification(`${product.urunAdi} (${displayText}) sepete eklendi!`, 'success');
     } else {
         const indirim = product.indirim || 0;
         const discountFactor = 1 - (indirim / 100);
@@ -2126,15 +2459,17 @@ function addToCartWithProduct(product, selectedSize) {
 
         cart.push({
             urunId: product.id,
-            barkod: product.barkod,
+            barkod: sizeInfo ? sizeInfo.barkod : product.barkod,
             urunAdi: product.urunAdi,
             beden: selectedSize || (product.beden || ''),
+            renk: selectedRenk || '',
             birimFiyat: product.satisFiyati,
             miktar: 1,
             indirim: indirim,
             toplamFiyat: discountedPrice
         });
-        showNotification(`${product.urunAdi} (${selectedSize}) sepete eklendi!`, 'success');
+        const displayText = selectedRenk ? `${selectedSize} / ${selectedRenk}` : selectedSize;
+        showNotification(`${product.urunAdi} (${displayText}) sepete eklendi!`, 'success');
     }
     updateCartDisplay();
 }
@@ -2175,7 +2510,7 @@ function updateCartDisplay() {
                         <i class="fas fa-box text-indigo-600"></i>
                     </div>
                     <div>
-                        <h3 class="font-medium">${item.urunAdi}${item.beden ? ` <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full ml-1">${item.beden} Beden</span>` : ''}</h3>
+                        <h3 class="font-medium">${item.urunAdi}${item.beden ? ` <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full ml-1">${item.beden} Beden</span>` : ''}${item.renk ? ` <span class="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full ml-1">${item.renk}</span>` : ''}</h3>
                         <div class="text-sm text-gray-500">
                             <span>${item.birimFiyat.toFixed(2)} TL x ${item.miktar}</span>
                             ${item.indirim > 0 ? `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${item.indirim} İndirim</span>` : ''}
@@ -2374,6 +2709,30 @@ async function selectBarcodeMode(mode) {
 
                     <div id="barcodeSizeSelectionDiv" class="hidden space-y-4 p-4 bg-white rounded-lg border border-gray-200">
                         <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Renk Seçimi (Zorunlu)</label>
+                            <div id="barcodeColorSelectionDiv" class="space-y-2 mt-2">
+                                <div class="text-xs text-gray-500 mb-2">Genel Renkler:</div>
+                                <div class="flex flex-wrap gap-2">
+                                    ${['Siyah', 'Beyaz', 'Kırmızı', 'Mavi', 'Yeşil', 'Sarı', 'Turuncu', 'Pembe', 'Mor', 'Lacivert', 'Bej', 'Gri', 'Kahverengi', 'Bordo', 'Turkuaz'].map(renk => `
+                                        <label class="inline-flex items-center p-1 px-2 bg-white border rounded hover:bg-indigo-50 cursor-pointer transition-colors text-xs">
+                                            <input type="checkbox" class="barcode-color-checkbox form-checkbox h-3 w-3 text-indigo-600" value="${renk}" onchange="updateBarcodeStockInputs()">
+                                            <span class="ml-1 text-xs text-gray-700">${renk}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                                <div class="mt-2">
+                                    <label class="block text-xs text-gray-600 mb-1">Diğer Renk Ekle:</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="barcodeCustomColorInput" placeholder="Renk adı girin..." class="flex-1 px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none">
+                                        <button type="button" onclick="addBarcodeCustomColor()" class="px-3 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition">
+                                            <i class="fas fa-plus"></i> Ekle
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="barcodeSelectedColorsContainer" class="flex flex-wrap gap-1 mt-2"></div>
+                            </div>
+                        </div>
+                        <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Beden Seçimi (Sayısal)</label>
                             <div class="flex flex-wrap gap-2">
                                 ${[38, 40, 42, 44, 46, 48, 50, 52, 54].map(size => `
@@ -2494,14 +2853,19 @@ async function selectBarcodeMode(mode) {
                     standardCountDiv.classList.add('hidden');
                     sizeCountsDiv.innerHTML = `
                         <div class="col-span-2 text-sm font-bold text-gray-600 mb-1 border-bottom">Bedenlere Göre Barkod Adedi</div>
-                        ${product.bedenler.map(b => `
+                        ${product.bedenler.map(b => {
+                            const key = b.renk ? `${b.beden}_${b.renk}` : b.beden;
+                            return `
                             <div class="flex items-center space-x-2 bg-blue-50 p-2 rounded border border-blue-100">
-                                <span class="text-sm font-bold text-blue-700 w-20">${b.beden}</span>
-                                <input type="number" id="existing_barcode_count_${b.beden}" value="1" min="0"
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold text-blue-700">${b.beden}</span>
+                                    ${b.renk ? `<span class="text-xs text-gray-700">${b.renk}</span>` : ''}
+                                </div>
+                                <input type="number" id="existing_barcode_count_${key}" value="1" min="0"
                                     class="w-full px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-blue-400 outline-none"
                                     placeholder="Barkod Adedi">
                             </div>
-                        `).join('')}
+                        `}).join('')}
                     `;
                 } else {
                     sizeCountsDiv.classList.add('hidden');
@@ -2533,29 +2897,75 @@ async function handleNewProductBarcode(e) {
 
     if (kategori === 'Kıyafet') {
         const checkedSizes = document.querySelectorAll('.barcode-size-checkbox:checked');
+        const enableColors = true; // Renk seçimi her zaman aktif
+        const selectedColors = [];
+
+        // Seçilen renkleri al
+        document.querySelectorAll('.barcode-color-checkbox:checked').forEach(cb => selectedColors.push(cb.value));
+        document.querySelectorAll('.barcode-selected-color-input').forEach(input => selectedColors.push(input.value));
+
         checkedSizes.forEach(checkbox => {
             const size = checkbox.value;
-            const stockVal = parseInt(document.getElementById(`barcode_stock_${size}`).value) || 0;
-            const countVal = parseInt(document.getElementById(`barcode_count_${size}`).value) || 0;
 
-            if (stockVal > 0 || countVal > 0) {
-                const uniqueBarcode = document.getElementById(`barcode_val_${size}`).value || generateBarcodeNumber();
-                bedenler.push({
-                    beden: size,
-                    barkod: uniqueBarcode,
-                    miktar: stockVal
+            if (enableColors && selectedColors.length > 0) {
+                // Her beden+renk kombinasyonu için
+                selectedColors.forEach(color => {
+                    const key = `${size}_${color}`;
+                    const stockInput = document.getElementById(`barcode_stock_${key}`);
+                    const countInput = document.getElementById(`barcode_count_${key}`);
+
+                    if (stockInput && countInput) {
+                        const stockVal = parseInt(stockInput.value) || 0;
+                        const countVal = parseInt(countInput.value) || 0;
+
+                        if (stockVal > 0 || countVal > 0) {
+                            const uniqueBarcode = document.getElementById(`barcode_val_${key}`).value || generateBarcodeNumber();
+                            bedenler.push({
+                                beden: size,
+                                renk: color,
+                                barkod: uniqueBarcode,
+                                miktar: stockVal
+                            });
+                            totalStok += stockVal;
+
+                            if (countVal > 0) {
+                                printItems.push({
+                                    barkod: uniqueBarcode,
+                                    urunAdi: urunAdi,
+                                    kategori: kategori,
+                                    beden: size,
+                                    renk: color,
+                                    satisFiyati: satisFiyati,
+                                    adet: countVal
+                                });
+                            }
+                        }
+                    }
                 });
-                totalStok += stockVal;
+            } else {
+                // Renk yoksa, sadece beden
+                const stockVal = parseInt(document.getElementById(`barcode_stock_${size}`).value) || 0;
+                const countVal = parseInt(document.getElementById(`barcode_count_${size}`).value) || 0;
 
-                if (countVal > 0) {
-                    printItems.push({
-                        barkod: uniqueBarcode,
-                        urunAdi: urunAdi,
-                        kategori: kategori,
+                if (stockVal > 0 || countVal > 0) {
+                    const uniqueBarcode = document.getElementById(`barcode_val_${size}`).value || generateBarcodeNumber();
+                    bedenler.push({
                         beden: size,
-                        satisFiyati: satisFiyati,
-                        adet: countVal
+                        barkod: uniqueBarcode,
+                        miktar: stockVal
                     });
+                    totalStok += stockVal;
+
+                    if (countVal > 0) {
+                        printItems.push({
+                            barkod: uniqueBarcode,
+                            urunAdi: urunAdi,
+                            kategori: kategori,
+                            beden: size,
+                            satisFiyati: satisFiyati,
+                            adet: countVal
+                        });
+                    }
                 }
             }
         });
@@ -2625,13 +3035,15 @@ async function handleExistingProductBarcode(e) {
 
         if (product.bedenler && product.bedenler.length > 0) {
             product.bedenler.forEach(b => {
-                const countVal = parseInt(document.getElementById(`existing_barcode_count_${b.beden}`).value) || 0;
+                const key = b.renk ? `${b.beden}_${b.renk}` : b.beden;
+                const countVal = parseInt(document.getElementById(`existing_barcode_count_${key}`).value) || 0;
                 if (countVal > 0) {
                     printItems.push({
                         barkod: b.barkod || product.barkod,
                         urunAdi: product.urunAdi,
                         kategori: product.kategori || 'Kıyafet',
                         beden: b.beden,
+                        renk: b.renk || '',
                         satisFiyati: product.satisFiyati,
                         adet: countVal
                     });
@@ -2686,12 +3098,13 @@ function showBarcodePreview(items) {
     items.forEach(item => {
         for (let i = 0; i < item.adet; i++) {
             barcodesHTML += `
-                <div class="barcode-item bg-white p-1 border border-gray-300 rounded w-full flex flex-col items-center justify-center text-center">
-                    <div class="product-name font-bold text-black w-full truncate">${item.urunAdi}</div>
-                    ${item.beden ? `<div class="product-size font-bold text-black w-full truncate">${item.beden} BEDEN</div>` : ''}
-                    <div class="product-price font-bold text-black">${parseFloat(item.satisFiyati || 0).toFixed(2)} TL</div>
-                    <svg id="barcode-${globalIndex}" class="barcode-svg"></svg>
-                    <div class="store-name font-bold text-black">NİSA TESETTÜR</div>
+                <div class="barcode-item bg-white border-2 border-black w-full flex flex-col text-center" style="width: 80px; height: 116px;">
+                    <div class="product-name font-bold text-black w-full border-b border-black text-xs leading-tight p-1 break-words" style="font-size: 6pt; line-height: 1.2;">${item.urunAdi}</div>
+                    ${item.renk ? `<div class="product-color font-bold text-black w-full border-b border-black text-xs p-0.5" style="font-size: 6pt; line-height: 1.2;">${item.renk}</div>` : ''}
+                    ${item.beden ? `<div class="product-size font-black text-black w-full border-b border-black text-sm p-0.5" style="font-size: 8pt; line-height: 1.2;">${item.beden} BEDEN</div>` : ''}
+                    <div class="product-price font-black text-black w-full border-b border-black p-0.5" style="font-size: 12pt; line-height: 1.2;">${parseFloat(item.satisFiyati || 0).toFixed(2)} TL</div>
+                    <svg id="barcode-${globalIndex}" class="barcode-svg flex-1"></svg>
+                    <div class="store-name font-black text-black w-full p-0.5" style="font-size: 8pt; line-height: 1.2;">NİSA TESETTÜR</div>
                 </div>
             `;
             globalIndex++;
@@ -2700,6 +3113,14 @@ function showBarcodePreview(items) {
 
     // Preview container logic
     formArea.innerHTML = `
+        <style>
+            .barcode-item .barcode-svg {
+                width: 95% !important;
+                max-width: 75px !important;
+                height: auto !important;
+                margin: 2px auto !important;
+            }
+        </style>
         <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-300">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-green-800 flex items-center">
@@ -2707,24 +3128,24 @@ function showBarcodePreview(items) {
                     Barkodlar Oluşturuldu (${globalIndex} Adet)
                 </h3>
                 <div class="space-x-2">
-                    <button onclick="printBarcodes()" 
+                    <button onclick="printBarcodes()"
                         class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-md">
                         <i class="fas fa-print mr-2"></i>Yazdır
                     </button>
-                    <button onclick="showBarcodeGenerator()" 
+                    <button onclick="showBarcodeGenerator()"
                         class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
                         <i class="fas fa-redo mr-2"></i>Yeni Barkod
                     </button>
                 </div>
             </div>
-            
+
             <div id="barcodePreviewArea" class="grid grid-cols-4 gap-4 max-h-96 overflow-y-auto">
                 ${barcodesHTML}
             </div>
         </div>
     `;
 
-    // Draw barcodes with LARGER size
+    // Draw barcodes with preview size
     setTimeout(() => {
         let currentIdx = 0;
         items.forEach(item => {
@@ -2732,10 +3153,10 @@ function showBarcodePreview(items) {
                 try {
                     JsBarcode(`#barcode-${currentIdx}`, item.barkod, {
                         format: 'CODE128',
-                        width: 2,
-                        height: 30,
+                        width: 1.5,
+                        height: 25,
                         displayValue: true,
-                        fontSize: 10,
+                        fontSize: 8,
                         margin: 0,
                         textMargin: 0
                     });
@@ -2748,7 +3169,7 @@ function showBarcodePreview(items) {
     }, 100);
 }
 
-// Barkodları yazdır (40x25mm Termal Etiket Optimize Edilmiş)
+// Barkodları yazdır (40x58mm Termal Etiket - DİKEY)
 function printBarcodes() {
     // Preview alanındaki itemları al
     const barcodeItems = document.querySelectorAll('.barcode-item');
@@ -2774,112 +3195,118 @@ function printBarcodes() {
                     padding: 0;
                     box-sizing: border-box;
                 }
-                
+
                 @media print {
                     @page {
-                        size: 40mm 25mm; /* 40x25mm GERİ DÖNÜŞ */
+                        size: 40mm 58mm; /* 40x58mm DİKEY */
                         margin: 0mm;
                     }
                     html, body {
                         width: 40mm;
-                        height: 25mm;
+                        height: 58mm;
                         margin: 0 !important;
                         padding: 0 !important;
                     }
                     body::after { content: none !important; }
-                    
+
                     .print-item {
                         width: 40mm;
-                        height: 25mm;
-                        
-                        /* İçerik hizalama - Manuel Boşluklandırma */
+                        height: 58mm;
+
+                        /* İçerik hizalama */
                         display: flex;
                         flex-direction: column;
                         align-items: center;
-                        justify-content: flex-start; 
+                        justify-content: space-between;
                         text-align: center;
-                        
+
                         margin: 0 !important;
-                        /* Üstten minimum boşluk */
-                        padding-top: 1mm !important; 
-                        padding-left: 1mm;
-                        padding-right: 1mm;
-                        padding-bottom: 0 !important;
-                        
+                        padding: 2mm 1mm 1mm 1mm !important;
+
                         page-break-after: always;
                         overflow: hidden;
                         border: none !important;
                     }
-                    
+
                     .print-item:last-child {
                         page-break-after: auto;
                     }
                 }
-                
+
                 body { font-family: Arial, sans-serif; }
-                
-                /* --- İÇERİK AYARLARI (4x ORANTILI BOŞLUKLAR) --- */
-                
-                /* Ürün Adı */
+
+                /* --- İÇERİK AYARLARI (TABLO YAPISI - 58mm YÜKSEKLİK) --- */
+
+                /* Tablo Hücreleri - Ortak Stil */
+                .product-name,
+                .product-color,
+                .product-size,
+                .product-price,
+                .store-name {
+                    border: 0.5pt solid #000 !important;
+                    background: #fff !important;
+                    padding: 0.5mm 1mm !important;
+                    width: 100% !important;
+                    margin: 0 !important;
+                }
+
+                /* Ürün Adı - Tablo Hücresi */
                 .product-name {
-                    font-size: 8pt !important;
+                    font-size: 6pt !important;
                     font-weight: bold !important;
                     text-transform: uppercase !important;
-                    line-height: 1 !important;
-                    
-                    max-height: 4mm;
-                    overflow: hidden !important;
-                    white-space: nowrap !important;
-                    width: 100% !important;
-                    
-                    margin: 0 !important;
-                    margin-bottom: 0.5mm !important; /* Boşluk azaltıldı */
+                    line-height: 1.2 !important;
+
+                    word-wrap: break-word !important;
+                    overflow-wrap: break-word !important;
+                    max-height: 9mm !important;
+                    display: -webkit-box !important;
+                    -webkit-line-clamp: 2 !important;
+                    -webkit-box-orient: vertical !important;
+                    border-bottom: none !important;
                 }
-                
-                /* Beden */
+
+                /* Renk - Tablo Hücresi */
+                .product-color {
+                    font-size: 6pt !important;
+                    font-weight: bold !important;
+                    line-height: 1.2 !important;
+                    border-bottom: none !important;
+                }
+
+                /* Beden - Tablo Hücresi */
                 .product-size {
-                    font-size: 9pt !important;
+                    font-size: 8pt !important;
                     font-weight: 900 !important;
                     text-transform: uppercase !important;
-                    line-height: 1 !important;
-                    
-                    margin: 0 !important;
-                    margin-bottom: 0.5mm !important; /* Boşluk azaltıldı */
+                    line-height: 1.2 !important;
+                    border-bottom: none !important;
                 }
-                
-                /* Fiyat */
+
+                /* Fiyat - Tablo Hücresi */
                 .product-price {
                     font-size: 14pt !important;
                     font-weight: 900 !important;
-                    line-height: 0.9 !important;
-                    
-                    margin: 0 !important;
-                    margin-bottom: 0.5mm !important; /* Boşluk azaltıldı */
+                    line-height: 1.2 !important;
+                    border-bottom: none !important;
                 }
-                
-                /* Barkod Çizgileri */
+
+                /* Barkod Çizgileri - Tablo Hücresi İçi */
                 .barcode-svg {
                     width: 95% !important;
-                    height: 10mm !important; /* Yükseklik artırıldı */
+                    height: 14mm !important;
                     max-width: 38mm !important;
                     display: block;
-                    
-                    margin: 0 !important;
-                    margin-left: 1mm !important; /* Sağa kaydır */
-                    margin-top: 1mm !important; /* Üstten boşluk */
-                    margin-bottom: 1mm !important; /* Alttan boşluk */
+                    margin: 1mm auto !important;
                 }
-                
-                /* Mağaza Adı */
+
+                /* Mağaza Adı - Tablo Hücresi */
                 .store-name {
-                    font-size: 13pt !important; /* KOCAMAN */
+                    font-size: 9pt !important;
                     font-weight: 900 !important;
                     text-transform: uppercase !important;
-                    line-height: 0.9 !important;
-                    margin: 0 !important;
-                    white-space: nowrap !important;
-                    width: 100% !important;
-                    letter-spacing: -0.5px !important;
+                    line-height: 1.2 !important;
+                    letter-spacing: -0.3px !important;
                 }
             </style>
         </head>
@@ -2924,6 +3351,7 @@ function toggleBarcodeSizeSelection(category) {
 function updateBarcodeStockInputs() {
     const container = document.getElementById('barcodeStockInputContainer');
     const checkedSizes = document.querySelectorAll('.barcode-size-checkbox:checked');
+    const enableColors = true; // Renk seçimi her zaman aktif
     const currentValues = {};
 
     // Save current values to restore them after re-render
@@ -2933,35 +3361,122 @@ function updateBarcodeStockInputs() {
 
     container.innerHTML = '';
 
+    // Seçilen renkleri al
+    const selectedColors = [];
+    document.querySelectorAll('.barcode-color-checkbox:checked').forEach(cb => selectedColors.push(cb.value));
+    document.querySelectorAll('.barcode-selected-color-input').forEach(input => selectedColors.push(input.value));
+
     checkedSizes.forEach(checkbox => {
         const size = checkbox.value;
-        const stockVal = currentValues[`barcode_stock_${size}`] || '';
-        const countVal = currentValues[`barcode_count_${size}`] || '1';
-        const barcodeVal = currentValues[`barcode_val_${size}`] || generateBarcodeNumber();
 
-        const div = document.createElement('div');
-        div.className = 'bg-indigo-50 p-3 rounded border border-indigo-100 space-y-2';
-        div.innerHTML = `
-            <div class="flex justify-between items-center">
-                <div class="text-sm font-bold text-indigo-700">${size} Beden</div>
-                <div class="text-[10px] text-indigo-400 truncate">Barkod: ${barcodeVal}</div>
-                <input type="hidden" id="barcode_val_${size}" value="${barcodeVal}">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Stok</label>
-                    <input type="number" id="barcode_stock_${size}" value="${stockVal}"
-                        class="w-full px-2 py-1 text-sm border rounded focus:border-indigo-500 focus:outline-none"
-                        placeholder="Miktar" required>
+        // Eğer renk seçimi aktifse, her beden+renk için ayrı kart oluştur
+        if (enableColors && selectedColors.length > 0) {
+            selectedColors.forEach(color => {
+                const key = `${size}_${color}`;
+                const stockVal = currentValues[`barcode_stock_${key}`] || '';
+                const countVal = currentValues[`barcode_count_${key}`] || '1';
+                const barcodeVal = currentValues[`barcode_val_${key}`] || generateBarcodeNumber();
+
+                const div = document.createElement('div');
+                div.className = 'bg-indigo-50 p-3 rounded border border-indigo-100 space-y-2';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="px-2 py-0.5 bg-gray-100 text-black rounded text-xs font-bold inline-block mb-1">${color}</div>
+                            <div class="text-sm font-bold text-indigo-700">${size} Beden</div>
+                        </div>
+                        <div class="text-[10px] text-indigo-400 truncate">Barkod: ${barcodeVal}</div>
+                        <input type="hidden" id="barcode_val_${key}" value="${barcodeVal}">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Stok</label>
+                            <input type="number" id="barcode_stock_${key}" value="${stockVal}"
+                                class="w-full px-2 py-1 text-sm border rounded focus:border-indigo-500 focus:outline-none"
+                                placeholder="Miktar" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Barkod</label>
+                            <input type="number" id="barcode_count_${key}" value="${countVal}"
+                                class="w-full px-2 py-1 text-sm border rounded focus:border-indigo-500 focus:outline-none"
+                                placeholder="Adet" required min="0">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        } else {
+            // Renk seçimi yoksa, sadece beden
+            const stockVal = currentValues[`barcode_stock_${size}`] || '';
+            const countVal = currentValues[`barcode_count_${size}`] || '1';
+            const barcodeVal = currentValues[`barcode_val_${size}`] || generateBarcodeNumber();
+
+            const div = document.createElement('div');
+            div.className = 'bg-indigo-50 p-3 rounded border border-indigo-100 space-y-2';
+            div.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div class="text-sm font-bold text-indigo-700">${size} Beden</div>
+                    <div class="text-[10px] text-indigo-400 truncate">Barkod: ${barcodeVal}</div>
+                    <input type="hidden" id="barcode_val_${size}" value="${barcodeVal}">
                 </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Barkod</label>
-                    <input type="number" id="barcode_count_${size}" value="${countVal}"
-                        class="w-full px-2 py-1 text-sm border rounded focus:border-indigo-500 focus:outline-none"
-                        placeholder="Adet" required min="0">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Stok</label>
+                        <input type="number" id="barcode_stock_${size}" value="${stockVal}"
+                            class="w-full px-2 py-1 text-sm border rounded focus:border-indigo-500 focus:outline-none"
+                            placeholder="Miktar" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Barkod</label>
+                        <input type="number" id="barcode_count_${size}" value="${countVal}"
+                            class="w-full px-2 py-1 text-sm border rounded focus:border-indigo-500 focus:outline-none"
+                            placeholder="Adet" required min="0">
+                    </div>
                 </div>
-            </div>
-        `;
-        container.appendChild(div);
+            `;
+            container.appendChild(div);
+        }
     });
+}
+
+// Toggle color selection in barcode form
+function toggleBarcodeColorSelection() {
+    const checkbox = document.getElementById('barcodeEnableColorSelection');
+    const colorDiv = document.getElementById('barcodeColorSelectionDiv');
+
+    if (checkbox.checked) {
+        colorDiv.classList.remove('hidden');
+    } else {
+        colorDiv.classList.add('hidden');
+    }
+
+    // Refresh stock inputs
+    updateBarcodeStockInputs();
+}
+
+// Add custom color in barcode form
+function addBarcodeCustomColor() {
+    const input = document.getElementById('barcodeCustomColorInput');
+    const colorName = input.value.trim();
+
+    if (!colorName) {
+        showNotification('Lütfen bir renk adı girin!', 'error');
+        return;
+    }
+
+    // Seçilen renkleri göster
+    const container = document.getElementById('barcodeSelectedColorsContainer');
+    const colorTag = document.createElement('span');
+    colorTag.className = 'inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs';
+    colorTag.innerHTML = `
+        ${colorName}
+        <button type="button" onclick="this.parentElement.remove(); updateBarcodeStockInputs();" class="ml-1 text-indigo-500 hover:text-indigo-700">
+            <i class="fas fa-times"></i>
+        </button>
+        <input type="hidden" class="barcode-selected-color-input" value="${colorName}">
+    `;
+    container.appendChild(colorTag);
+
+    input.value = '';
+    updateBarcodeStockInputs();
 }

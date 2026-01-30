@@ -31,9 +31,83 @@ if (!gotTheLock) {
 const adapter = new FileSync('database.json');
 const db = low(adapter);
 
-// Uygulama başlarken database.json dosyasının otomatik yedeğini al
+// ============================================================
+// GÜNLÜK YEDEKLEME SİSTEMİ
+// ============================================================
+
 const dbPath = path.join(__dirname, 'database.json');
+const backupsDir = path.join(__dirname, 'backups');
 const backupPath = path.join(__dirname, 'database_backup.json');
+
+// Backups klasörünü oluştur
+if (!fs.existsSync(backupsDir)) {
+    fs.mkdirSync(backupsDir, { recursive: true });
+    console.log('backups/ klasörü oluşturuldu.');
+}
+
+// Tarihi formatla (YYYY-MM-DD)
+function getFormattedDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Günlük yedek al
+function createDailyBackup() {
+    try {
+        const today = getFormattedDate();
+        const dailyBackupPath = path.join(backupsDir, `database_${today}.json`);
+
+        // Eğer bugün için yedek yoksa oluştur
+        if (!fs.existsSync(dailyBackupPath)) {
+            fs.copyFileSync(dbPath, dailyBackupPath);
+            console.log(`Günlük yedek alındı: database_${today}.json`);
+        }
+
+        // Eski yedekleri temizle (7 günden eski olanları sil)
+        cleanOldBackups(7);
+    } catch (error) {
+        console.error('Yedek alma hatası:', error);
+    }
+}
+
+// Eski yedekleri temizle (gün sayısı)
+function cleanOldBackups(daysToKeep) {
+    try {
+        const files = fs.readdirSync(backupsDir);
+        const now = new Date();
+
+        files.forEach(file => {
+            if (file.startsWith('database_') && file.endsWith('.json')) {
+                const filePath = path.join(backupsDir, file);
+                const stats = fs.statSync(filePath);
+                const fileAge = now - stats.mtime;
+                const daysOld = fileAge / (1000 * 60 * 60 * 24);
+
+                if (daysOld > daysToKeep) {
+                    fs.unlinkSync(filePath);
+                    console.log(`${file} (${Math.floor(daysOld)} gün) silindi.`);
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Yedek temizleme hatası:', error);
+    }
+}
+
+// Uygulama başladığında yedek al
+createDailyBackup();
+
+// Her gün gece yarısı yedek al (24 saatte bir)
+setInterval(() => {
+    createDailyBackup();
+}, 24 * 60 * 60 * 1000); // 24 saat
+
+// ============================================================
+// ESKİ YEDEKLEME SİSTEMİ (GERİYE UYUMLULUK)
+// ============================================================
 
 if (fs.existsSync(dbPath) && !fs.existsSync(backupPath)) {
     fs.copyFileSync(dbPath, backupPath);
@@ -272,13 +346,15 @@ ipcMain.handle('saveSale', (event, data) => {
                     throw new Error(`Beden seçimi gerekli: ${product.urunAdi}`);
                 }
             } else {
-                // Find specific size
+                // Find specific size+color combination
                 const variant = product.bedenler.find(b =>
-                    String(b.beden).trim() === String(item.beden).trim()
+                    String(b.beden).trim() === String(item.beden).trim() &&
+                    (!item.renk || String(b.renk || '').trim() === String(item.renk).trim())
                 );
 
                 if (!variant) {
-                    throw new Error(`Beden bulunamadı: ${product.urunAdi} - ${item.beden}`);
+                    const displayText = item.renk ? `${item.beden} / ${item.renk}` : item.beden;
+                    throw new Error(`Beden/Renk kombinasyonu bulunamadı: ${product.urunAdi} - ${displayText}`);
                 }
                 availableStock = variant.miktar;
             }
@@ -316,6 +392,7 @@ ipcMain.handle('saveSale', (event, data) => {
                 satisId: saleId,
                 urunId: item.urunId,
                 beden: item.beden || '',
+                renk: item.renk || '',
                 miktar: item.miktar,
                 birimFiyat: item.birimFiyat,
                 toplamFiyat: item.toplamFiyat
@@ -327,9 +404,10 @@ ipcMain.handle('saveSale', (event, data) => {
         const product = db.get('urunler').find({ id: item.urunId }).value();
 
         if (product.bedenler && Array.isArray(product.bedenler) && product.bedenler.length > 0) {
-            // Find index with robust matching
+            // Find index with robust matching (beden + renk combination)
             const bedenIndex = product.bedenler.findIndex(b =>
-                String(b.beden).trim() === String(item.beden).trim()
+                String(b.beden).trim() === String(item.beden).trim() &&
+                (!item.renk || String(b.renk || '').trim() === String(item.renk).trim())
             );
 
             if (bedenIndex !== -1) {
@@ -397,7 +475,8 @@ ipcMain.handle('getSales', (event, userId) => {
                 .find({ id: detail.urunId })
                 .value();
             const bedenInfo = detail.beden ? ` (${detail.beden})` : '';
-            return `${product.urunAdi}${bedenInfo} (${detail.miktar})`;
+            const renkInfo = detail.renk ? ` / ${detail.renk}` : '';
+            return `${product.urunAdi}${bedenInfo}${renkInfo} (${detail.miktar})`;
         });
 
         return {
@@ -666,8 +745,11 @@ ipcMain.handle('deleteSale', (event, saleId) => {
             const product = db.get('urunler').find({ id: detail.urunId }).value();
 
             if (product.bedenler && Array.isArray(product.bedenler)) {
-                // New format: restore specific beden's miktar
-                const bedenIndex = product.bedenler.findIndex(b => b.beden === detail.beden);
+                // New format: restore specific beden+renk combination's miktar
+                const bedenIndex = product.bedenler.findIndex(b =>
+                    b.beden === detail.beden &&
+                    (!detail.renk || (b.renk || '') === detail.renk)
+                );
                 if (bedenIndex !== -1) {
                     db.get('urunler')
                         .find({ id: detail.urunId })
@@ -737,7 +819,7 @@ ipcMain.handle('printSaleReceipt', (event, saleData) => {
             <div class="line"></div>
             ${saleData.items.map(item => `
                 <div class="item">
-                    <span>${item.urunAdi}${item.beden ? ` (${item.beden})` : ''} x${item.miktar}</span>
+                    <span>${item.urunAdi}${item.beden ? ` (${item.beden})` : ''}${item.renk ? ` / ${item.renk}` : ''} x${item.miktar}</span>
                     <span>${item.toplamFiyat.toFixed(2)} TL</span>
                 </div>
             `).join('')}
