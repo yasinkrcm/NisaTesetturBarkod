@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yazıcı Testi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .test-page {
+            width: 58mm;
+            height: 40mm;
+            background: black;
+            border: 2px solid red;
+            margin: 20px auto;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        @media print {
+            @page {
+                size: 58mm 40mm;
+                margin: 0;
+            }
+
+            html,
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background: white;
+                padding: 0;
+                margin: 0;
+                width: 58mm;
+                height: 40mm;
+            }
+
+            .container {
+                margin: 0;
+                padding: 0;
+                width: 58mm;
+                height: 40mm;
+            }
+
+            .test-page {
+                width: 58mm;
+                height: 40mm;
+                background: black !important;
+                border: none;
+                margin: 0;
+                page-break-inside: avoid;
+            }
+
+            h1,
+            button {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🖨️ Yazıcı Test Sayfası</h1>
+        <p>58mm x 40mm - Tamamen Siyah</p>
+
+        <div class="test-page"></div>
+
+        <button onclick="window.print()">Yazdır</button>
+    </div>
+</body>
+
+</html>

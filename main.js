@@ -109,32 +109,14 @@ setInterval(() => {
 // ESKİ YEDEKLEME SİSTEMİ (GERİYE UYUMLULUK)
 // ============================================================
 
-if (fs.existsSync(dbPath) && !fs.existsSync(backupPath)) {
-    fs.copyFileSync(dbPath, backupPath);
-}
+// ============================================================
+// ESKİ YEDEKLEME SİSTEMİ KALDIRILDI
+// ============================================================
+// Eski 'database_backup.json' dosyası boş olduğu için veri kaybına
+// ve veritabanı sıfırlanmasına neden oluyordu. Bu tehlikeli mantık
+// devre dışı bırakıldı. Artık sadece 'backups/' klasöründeki
+// tarihli ve güvenli yedekler kullanılacak.
 
-// Otomatik kurtarma: database.json sıfırlandıysa veya bozulduysa yedekten geri yükle
-if (fs.existsSync(backupPath) && fs.existsSync(dbPath)) {
-    try {
-        const dbContent = fs.readFileSync(dbPath, 'utf-8');
-        const parsed = JSON.parse(dbContent);
-        // Eğer ürünler, satışlar ve detaylar boşsa, sıfırlanmış demektir
-        if (
-            Array.isArray(parsed.urunler) && parsed.urunler.length === 0 &&
-            Array.isArray(parsed.satislar) && parsed.satislar.length === 0 &&
-            Array.isArray(parsed.satisDetay) && parsed.satisDetay.length === 0 &&
-            parsed.kullanicilar && parsed.kullanicilar.length === 1 &&
-            parsed.kullanicilar[0].kullaniciAdi === 'SametAslan'
-        ) {
-            fs.copyFileSync(backupPath, dbPath);
-            console.log('database.json sıfırlandığı için yedekten geri yüklendi.');
-        }
-    } catch (e) {
-        // Dosya bozuksa da yedekten geri yükle
-        fs.copyFileSync(backupPath, dbPath);
-        console.log('database.json bozuk olduğu için yedekten geri yüklendi.');
-    }
-}
 
 // Set default data
 db.defaults({
@@ -280,7 +262,7 @@ ipcMain.handle('getProducts', () => {
 
 ipcMain.handle('searchProduct', (event, barcode) => {
     try {
-        console.log(`Main process searching for barcode: ${barcode}`);
+        // console.log(`Main process searching for barcode: ${barcode}`); // Removed to reduce noise
         const barcodeStr = String(barcode).trim();
 
         // Check if products have bedenler array (new format)
@@ -779,20 +761,68 @@ ipcMain.handle('deleteSale', (event, saleId) => {
     }
 });
 
-// Print sale receipt
-ipcMain.handle('printSaleReceipt', (event, saleData) => {
+// Helper function to print to specific printer or fallback
+async function printToDevice(printWindow, deviceName) {
+    let printer = null;
     try {
-        const { BrowserWindow } = require('electron');
-        // Create a hidden window for printing
-        const printWindow = new BrowserWindow({
-            width: 300,
-            height: 600,
-            show: false,
-            webPreferences: {
-                nodeIntegration: true
+        const printers = await printWindow.webContents.getPrintersAsync();
+        printer = printers.find(p => p.name.includes(deviceName));
+    } catch (e) {
+        console.error("Error getting printers:", e);
+    }
+
+    if (!printer) {
+        console.log(`Printer matching "${deviceName}" not found. Opening print dialog...`);
+        return new Promise((resolve, reject) => {
+            printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
+                if (success) resolve();
+                else reject(reason);
+            });
+        });
+    }
+
+    console.log(`Found printer: ${printer.name}`);
+    return new Promise((resolve, reject) => {
+        printWindow.webContents.print({
+            silent: true,
+            printBackground: true,
+            deviceName: printer.name
+        }, (success, reason) => {
+            if (!success) {
+                console.log(`Silent print failed on ${printer.name}, retrying with dialog...`);
+                printWindow.webContents.print({ silent: false, printBackground: true }, (retrySuccess, retryReason) => {
+                    if (retrySuccess) resolve();
+                    else reject(retryReason);
+                });
+            } else {
+                resolve();
             }
         });
-        // Create HTML content for the receipt (sade, küçük, termal yazıcıya uygun)
+    });
+}
+
+// Print receipt
+ipcMain.handle('printSaleReceipt', async (event, saleData) => {
+    try {
+        const { BrowserWindow } = require('electron');
+        const printWindow = new BrowserWindow({
+            width: 300,
+            height: 400,
+            show: false,
+            webPreferences: { nodeIntegration: true }
+        });
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('tr-TR');
+        const timeStr = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        const receivedAmount = saleData.receivedAmount || saleData.totalAmount;
+        const changeAmount = saleData.changeAmount || 0;
+
+        // "Kasiyer" bilgisi varsa kullan, yoksa boş veya varsayılan
+        // saleData içinde kasiyer adı gelmiyor olabilir, şimdilik statik veya boş bırakalım.
+        // Eğer renderer'dan gönderilirse buraya eklenmeli.
+        const kasiyer = "KASA";
+
         const receiptHTML = `
         <!DOCTYPE html>
         <html>
@@ -805,67 +835,133 @@ ipcMain.handle('printSaleReceipt', (event, saleData) => {
                     margin: 0;
                     padding: 0;
                     width: 220px;
+                    font-weight: bold;
                 }
                 .center { text-align: center; }
-                .line { border-top: 1px dashed #000; margin: 4px 0; }
-                .item { display: flex; justify-content: space-between; }
+                .right { text-align: right; }
+                .left { text-align: left; }
+                .line { border-top: 1px dashed #000; margin: 5px 0; }
+                .row { display: flex; justify-content: space-between; }
+                .bold { font-weight: bold; }
+                .mb-1 { margin-bottom: 2px; }
+                .mt-2 { margin-top: 10px; }
+                .header { font-size: 14px; margin-bottom: 5px; }
+                .address { font-size: 10px; margin-bottom: 5px; text-transform: uppercase; }
+                .info-grid {
+                    display: grid;
+                    grid-template-columns: auto auto;
+                    gap: 2px 10px;
+                    font-size: 11px;
+                }
+                .item-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                }
+                .item-name {
+                    max-width: 150px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
             </style>
         </head>
         <body>
-            <div class="center">NİSA TESETTÜR</div>
-            <div class="center">SATIŞ FİŞİ</div>
-            <div class="center">${new Date().toLocaleString('tr-TR')}</div>
-            <div class="center">Satış No: ${saleData.saleId}</div>
-            <div class="line"></div>
-            ${saleData.items.map(item => `
-                <div class="item">
-                    <span>${item.urunAdi}${item.beden ? ` (${item.beden})` : ''}${item.renk ? ` / ${item.renk}` : ''} x${item.miktar}</span>
-                    <span>${item.toplamFiyat.toFixed(2)} TL</span>
-                </div>
-            `).join('')}
-            <div class="line"></div>
-            <div class="item">
-                <span><b>Toplam:</b></span>
-                <span><b>${saleData.totalAmount.toFixed(2)} TL</b></span>
+            <div class="center header">NİSA TESETTÜR</div>
+            <div class="center address">
+                Gazi Mustafa Kemal Paşa Mahallesi
+                <br>
+                Öztrak Caddesi No:46/1
+                <br>
+                Tekirdağ/Çerkezköy
             </div>
-            <div class="center">Teşekkürler!</div>
+
+            <div class="info-grid">
+                <div>TARİH : ${dateStr}</div>
+                <div class="right">SAAT : ${timeStr}</div>
+                <div>SATIŞ NO : ${saleData.saleId}</div>
+                <div class="right">SATIŞ : NAKİT</div>
+                <div>KASİYER : ${kasiyer}</div>
+                <div></div>
+            </div>
+            
+            <div class="line"></div>
+
+            ${saleData.items.map(item => {
+            // Fiyat kontrolü: satisFiyati, birimFiyat veya 0
+            const price = parseFloat(item.satisFiyati || item.birimFiyat || 0);
+            const total = parseFloat(item.toplamFiyat || (price * item.miktar) || 0);
+            return `
+                <div class="mb-1">
+                    ${item.barkod || ''} (${item.miktar} ADET X ${price.toFixed(2)})
+                </div>
+                <div class="item-row mb-1">
+                    <span class="item-name">${item.urunAdi}</span>
+                    <span>${total.toFixed(2)}</span>
+                </div>
+                `;
+        }).join('')}
+
+            <div class="line"></div>
+
+            <div class="row">
+                <span>ALINAN PARA</span>
+                <span>${parseFloat(receivedAmount).toFixed(2)}</span>
+            </div>
+            <div class="row">
+                <span>PARA ÜSTÜ</span>
+                <span>${parseFloat(changeAmount).toFixed(2)}</span>
+            </div>
+            
+            <div class="line"></div>
+
+            <div class="row bold mt-2" style="font-size: 14px;">
+                <span>GENEL TOPLAM</span>
+                <span>${parseFloat(saleData.totalAmount).toFixed(2)}</span>
+            </div>
+            
+            <br>
+            <div class="center">KDV FİŞİ DEĞİLDİR</div>
+            
+            <br>
+            <div class="center">
+                <!-- Basit barkod temsili (fontsuz) -->
+                ||| || ||| || ||| |||
+            </div>
         </body>
         </html>
         `;
-        printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHTML)}`);
-        printWindow.webContents.on('did-finish-load', () => {
-            printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
-                printWindow.destroy();
-            });
 
-            // Güvenlik önlemi: 30 saniye sonra hala kapanmadıysa zorla kapat
-            setTimeout(() => {
-                if (!printWindow.isDestroyed()) printWindow.destroy();
-            }, 30000);
-        });
+        printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHTML)}`);
+
+        await new Promise(resolve => printWindow.webContents.on('did-finish-load', resolve));
+
+        // Try to print to "Aclas Printer"
+        await printToDevice(printWindow, "Aclas Printer");
+
+        if (!printWindow.isDestroyed()) printWindow.destroy();
+
         return { success: true };
     } catch (error) {
+        console.error('Print receipt error:', error);
         return { success: false, message: "Yazdırma sırasında bir hata oluştu!" };
     }
 });
 
 // Print end of day report
-ipcMain.handle('printEndOfDayReport', (event, reportData) => {
+ipcMain.handle('printEndOfDayReport', async (event, reportData) => {
     try {
         const { BrowserWindow } = require('electron');
-        // Create a hidden window for printing
         const printWindow = new BrowserWindow({
             width: 300,
             height: 400,
             show: false,
-            webPreferences: {
-                nodeIntegration: true
-            }
+            webPreferences: { nodeIntegration: true }
         });
-        // Tarih formatı: gün.ay.yıl
-        const today = new Date();
-        const formattedDate = today.toLocaleDateString('tr-TR');
-        // Create HTML content for the end of day report (fotoğraftaki gibi)
+
+        const formattedDate = new Date().toLocaleDateString('tr-TR');
+        const formattedTime = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
         const reportHTML = `
         <!DOCTYPE html>
         <html>
@@ -878,100 +974,193 @@ ipcMain.handle('printEndOfDayReport', (event, reportData) => {
                     margin: 0;
                     padding: 0;
                     width: 220px;
+                    font-weight: bold;
                 }
                 .center { text-align: center; }
-                .line { border-top: 1px solid #000; margin: 8px 0; }
-                .row { margin: 10px 0 10px 0; }
-                .label { display: inline-block; min-width: 120px; }
+                .right { text-align: right; }
+                .line { border-top: 1px dashed #000; margin: 5px 0; }
+                .row { display: flex; justify-content: space-between;margin: 2px 0; }
+                .header { font-size: 14px; margin-bottom: 5px; }
+                .subheader { font-size: 12px; margin-bottom: 5px; }
+                .address { font-size: 10px; margin-bottom: 10px; text-transform: uppercase; }
+                .item-row {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 11px;
+                }
+                .item-name {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 140px;
+                }
             </style>
         </head>
         <body>
-            <div class="center"><b>NİSA TESETTÜR</b></div>
-            <div class="center">GÜN SONU RAPORU</div>
-            <div class="center">${formattedDate}</div>
+            <div class="center header">NİSA TESETTÜR</div>
+            <div class="center address">
+                Gazi Mustafa Kemal Paşa Mahallesi
+                <br>
+                Öztrak Caddesi No:46/1
+                <br>
+                Tekirdağ/Çerkezköy
+            </div>
+            
+             <div class="center subheader">GÜN SONU RAPORU</div>
+             <div class="row">
+                <span>TARİH : ${formattedDate}</span>
+                <span>SAAT : ${formattedTime}</span>
+            </div>
+
             <div class="line"></div>
-            <div class="row"><span class="label">Toplam Satış Sayısı:</span> <span>${reportData.toplamSatis}</span></div>
-            <div class="row"><span class="label">Toplam Ciro:</span> <span>${Number(reportData.toplamCiro).toFixed(2)} TL</span></div>
-            <div class="row"><span class="label">Toplam Kar:</span> <span>${Number(reportData.toplamKar).toFixed(2)} TL</span></div>
+            
+            <div class="row">
+                <span>TOPLAM SATIŞ</span>
+                <span>${reportData.toplamSatis} ADET</span>
+            </div>
+            <div class="row">
+                <span>TOPLAM CİRO</span>
+                <span>${Number(reportData.toplamCiro).toFixed(2)} TL</span>
+            </div>
+            <div class="row">
+                <span>TOPLAM KAR</span>
+                <span>${Number(reportData.toplamKar).toFixed(2)} TL</span>
+            </div>
+            
             <div class="line"></div>
-            <div class="center"><b>SATILAN ÜRÜNLER</b></div>
+            <div class="center" style="margin-bottom: 5px;">SATILAN ÜRÜNLER</div>
             <div class="line"></div>
+            
             ${reportData.satilanUrunler && reportData.satilanUrunler.length > 0 ? reportData.satilanUrunler.map(item => `
-                <div style="margin-bottom: 8px;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <b>${item.urunAdi}</b>
-                        <b>${(item.satisFiyati * item.miktar).toFixed(2)} TL</b>
+                <div style="margin-bottom: 4px;">
+                    <div class="item-row">
+                        <span class="item-name">${item.urunAdi}</span>
+                        <span>${(item.satisFiyati * item.miktar).toFixed(2)}</span>
                     </div>
-                    <div style="font-size: 10px; display: flex; justify-content: space-between;">
-                        <span>Beden: ${item.beden}</span>
-                        <span>Adet: ${item.miktar} x ${item.satisFiyati.toFixed(2)} TL</span>
+                    <div style="font-size: 10px;">
+                        ${item.barkod || ''} (${item.miktar} ADET X ${parseFloat(item.satisFiyati).toFixed(2)})
                     </div>
-                    <div style="font-size: 10px;">Barkod: ${item.barkod}</div>
                 </div>
             `).join('') : '<div class="center">Satış yok</div>'}
+            
             <div class="line"></div>
+            <br>
+            <div class="center">
+                 <br>
+                 İMZA
+            </div>
         </body>
         </html>
         `;
+
         printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(reportHTML)}`);
-        printWindow.webContents.on('did-finish-load', () => {
-            printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
-                printWindow.destroy();
-            });
-        });
+
+        await new Promise(resolve => printWindow.webContents.on('did-finish-load', resolve));
+
+        // Use Aclas printer for report too if available
+        await printToDevice(printWindow, "Aclas Printer");
+
+        if (!printWindow.isDestroyed()) printWindow.destroy();
+
         return { success: true };
     } catch (error) {
         return { success: false, message: "Gün sonu raporu yazdırılırken bir hata oluştu!" };
     }
 });
 
-// Ürün etiketi yazdırma fonksiyonu (sadece ürün adı, küçük ve sade)
-ipcMain.handle('printProductLabel', (event, labelData) => {
+// Ürün etiketi (Barkod) yazdırma fonksiyonu
+ipcMain.handle('printProductLabel', async (event, htmlContent) => {
     try {
         const { BrowserWindow } = require('electron');
         const printWindow = new BrowserWindow({
-            width: 220,
-            height: 120,
+            width: 400,
+            height: 300,
             show: false,
-            webPreferences: {
-                nodeIntegration: true
-            }
+            webPreferences: { nodeIntegration: true }
         });
-        // labelData: { urunAdi: '2li yastık kılıfı' }
-        const labelHTML = `
+
+        // Read QR code image and convert to base64
+        let qrBase64 = '';
+        try {
+            // Check both local path (dev) and resources path (prod)
+            const path = require('path');
+            const fs = require('fs');
+
+            let qrPath = path.join(__dirname, 'qr.jpeg'); // Dev/Default
+
+            // In production with extraResources, likely adjacent to resources or inside it
+            // Electron resources path: process.resourcesPath
+            const resourcesQrPath = path.join(process.resourcesPath, 'qr.jpeg');
+
+            if (fs.existsSync(resourcesQrPath)) {
+                qrPath = resourcesQrPath;
+            }
+
+            if (fs.existsSync(qrPath)) {
+                const qrData = fs.readFileSync(qrPath);
+                qrBase64 = `data:image/jpeg;base64,${qrData.toString('base64')}`;
+            }
+        } catch (err) {
+            console.error('Error reading qr.jpeg:', err);
+        }
+
+        // Inject base64 image into HTML
+        // Replace src="qr.jpeg" with base64 data
+        let finalHTMLContent = htmlContent;
+        if (qrBase64) {
+            finalHTMLContent = htmlContent.replace(/src="qr.jpeg"/g, `src="${qrBase64}"`);
+        }
+
+        const fullHTML = `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Ürün Etiketi</title>
+            <title>Barkod Yazdırma</title>
             <style>
+                @page {
+                    size: 40mm 58mm;
+                    margin: 0;
+                }
                 body {
-                    font-family: 'Courier New', monospace;
-                    font-size: 14px;
                     margin: 0;
                     padding: 0;
-                    width: 220px;
+                    width: 100%;
+                    height: 100%;
                 }
-                .label-text {
-                    margin-top: 30px;
-                    margin-bottom: 30px;
-                    padding-left: 8px;
-                    letter-spacing: 1px;
+                .print-item {
+                    page-break-after: always;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    width: 40mm;
+                    height: 58mm; /* Etiket boyutu */
+                    overflow: hidden;
                 }
             </style>
         </head>
         <body>
-            <div class="label-text">${labelData.urunAdi}</div>
+            ${finalHTMLContent}
         </body>
-        </html>
-        `;
-        printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(labelHTML)}`);
-        printWindow.webContents.on('did-finish-load', () => {
+        </html>`;
+
+        printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fullHTML)}`);
+
+        await new Promise(resolve => printWindow.webContents.on('did-finish-load', resolve));
+
+        // Print - Open dialog (Ctrl+P style) as requested to fix size/settings
+        // "Argox" auto-selection removed
+        await new Promise((resolve, reject) => {
             printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
-                printWindow.destroy();
+                if (success) resolve();
+                else reject(reason);
             });
         });
+
+        if (!printWindow.isDestroyed()) printWindow.destroy();
+
         return { success: true };
     } catch (error) {
+        console.error('Label print error:', error);
         return { success: false, message: "Etiket yazdırılırken bir hata oluştu!" };
     }
 });

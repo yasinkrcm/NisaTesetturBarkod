@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barkod Oluşturucu</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        /* Etiket boyutu: 40mm x 58mm */
+        .barcode-container {
+            background: white;
+            border: 1px solid #000;
+            width: 40mm;
+            height: 58mm;
+            margin: 0 auto 20px auto;
+            padding: 2mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2px;
+        }
+
+        .info-table td {
+            padding: 1px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #000;
+            line-height: 1.2;
+        }
+
+        .left-align {
+            text-align: left;
+        }
+
+        .right-align {
+            text-align: right;
+        }
+
+        .product-name {
+            font-size: 11px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 25mm;
+        }
+
+        .size-label {
+            font-size: 10px;
+        }
+
+        .color-name {
+            font-size: 10px;
+        }
+
+        .size-value {
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .centered-row {
+            text-align: center;
+            width: 100%;
+            font-size: 9px;
+            font-weight: bold;
+            margin-top: 2px;
+            white-space: nowrap;
+        }
+
+        .barcode-wrapper {
+            margin-top: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        #barcode {
+            max-width: 100%;
+            height: 25mm;
+            /* Adjust based on available space */
+        }
+
+        .barcode-text {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: -2px;
+        }
+
+        .price-row {
+            font-size: 16px;
+            font-weight: 900;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .small-text {
+            font-size: 8px;
+            margin-top: 2px;
+        }
+
+        .store-name {
+            font-size: 11px;
+            font-weight: 900;
+            margin-top: 3px;
+            border-top: 1px solid #000;
+            width: 100%;
+            padding-top: 2px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .print-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        /* Yazdırma ayarları */
+        @media print {
+            @page {
+                size: 40mm 58mm;
+                margin: 0;
+            }
+
+            html,
+            body {
+                width: 40mm;
+                height: 58mm;
+                background: white;
+                margin: 0;
+                padding: 0;
+                display: block;
+            }
+
+            .container {
+                width: 40mm;
+                height: 58mm;
+                padding: 0;
+                margin: 0;
+                box-shadow: none;
+                border-radius: 0;
+                background: transparent;
+            }
+
+            .barcode-container {
+                border: none;
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                page-break-inside: avoid;
+            }
+
+            h1,
+            .button-group {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🏷️ Barkod Oluşturucu</h1>
+
+        <div class="barcode-container">
+            <!-- Row 1 & 2 Table -->
+            <table class="info-table">
+                <tr>
+                    <td class="left-align product-name" id="productName">Armine Eşarp</td>
+                    <td class="right-align size-label">BEDEN</td>
+                </tr>
+                <tr>
+                    <td class="left-align color-name" id="colorName">Siyah</td>
+                    <td class="right-align size-value" id="sizeValue">STD</td>
+                </tr>
+            </table>
+
+            <!-- Row 3 -->
+            <div class="centered-row">BEDEN/SİZE (STD)</div>
+
+            <!-- Row 4 -->
+            <div class="centered-row">ÜRETİM YERİ : TÜRKİYE</div>
+
+            <!-- Row 5 Barcode -->
+            <div class="barcode-wrapper">
+                <svg id="barcode"></svg>
+                <!-- Barcode text is handled by JsBarcode or custom div if displayValue is false. 
+                     The user prompt showed ("BARKOD") so they might want the number below. 
+                     JsBarcode can do this, but I'll add a custom div for control if needed. -->
+            </div>
+
+            <!-- Row 6 Price -->
+            <div class="price-row" id="priceValue">3.500,00 ₺</div>
+
+            <!-- Row 7 -->
+            <div class="centered-row small-text">KDV DAHİL</div>
+
+            <!-- Row 8 Store -->
+            <div class="centered-row store-name">NİSA TESETTÜR</div>
+        </div>
+
+        <div class="button-group">
+            <button class="generate-btn" onclick="generateBarcode()">
+                🔄 Yeni Barkod
+            </button>
+            <button class="print-btn" onclick="window.print()">
+                🖨️ Yazdır
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Rastgele barkod numarası oluştur (13 haneli EAN-13 formatı)
+        function generateRandomBarcode() {
+            let barcode = '';
+            for (let i = 0; i < 12; i++) {
+                barcode += Math.floor(Math.random() * 10);
+            }
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                sum += parseInt(barcode[i]) * (i % 2 === 0 ? 1 : 3);
+            }
+            const checkDigit = (10 - (sum % 10)) % 10;
+            return barcode + checkDigit;
+        }
+
+        // Barkod oluştur
+        function generateBarcode() {
+            const barcodeNumber = generateRandomBarcode();
+
+            // Randomly pick some data for demo purposes if desired, 
+            // or just keep static for now as user just asked for schema.
+            // I will randomize the price slightly to show it changes.
+            const randomPrice = (Math.floor(Math.random() * 500) + 100) * 10;
+            document.getElementById('priceValue').textContent = randomPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+
+            JsBarcode("#barcode", barcodeNumber, {
+                format: "EAN13",
+                width: 1.8,
+                height: 40,
+                displayValue: true, // Show the number
+                fontSize: 12,
+                margin: 0,
+                textMargin: 2
+            });
+        }
+
+        window.onload = function () {
+            generateBarcode();
+        };
+    </script>
+</body>
+
+</html>

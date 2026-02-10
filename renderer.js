@@ -1,73 +1,8 @@
-// Enhanced notification system with animations and icons
-let activeNotifications = [];
-let notificationCounter = 0;
+// ============= MAIN RENDERER FILE =============
+// Notification, keyboard shortcuts, and barcode functions are now in separate modules
+// See: js/notifications.js, js/keyboard-shortcuts.js, js/barcode.js
 
-function showNotification(message, type = 'info') {
-    // Check for duplicate messages already visible
-    if (activeNotifications.includes(message)) {
-        console.log(`Skipping duplicate notification: ${message}`);
-        return;
-    }
-
-    activeNotifications.push(message);
-    notificationCounter++;
-
-    const notification = document.createElement('div');
-    const notificationId = `notification-${notificationCounter}`;
-    notification.id = notificationId;
-
-    // Position notifications stacked from top
-    const topPosition = 20 + (activeNotifications.length - 1) * 70;
-
-    // Create notification with icon and styled content
-    let icon = '';
-    notification.className = 'notification';
-
-    if (type === 'error') {
-        notification.classList.add('error');
-        icon = '<i class="fas fa-exclamation-circle mr-2"></i>';
-    } else if (type === 'success') {
-        notification.classList.add('success');
-        icon = '<i class="fas fa-check-circle mr-2"></i>';
-    } else {
-        notification.classList.add('info');
-        icon = '<i class="fas fa-info-circle mr-2"></i>';
-    }
-
-    notification.style.top = `${topPosition}px`;
-    notification.style.zIndex = 9999;
-
-    // Create structured content
-    notification.innerHTML = `
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                ${icon}
-            </div>
-            <div class="ml-2 font-medium">${message}</div>
-        </div>
-    `;
-
-    document.body.appendChild(notification);
-    console.log(`Showing notification: ${message} (${type})`);
-
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        notification.style.transform = 'translateX(120%)';
-        notification.style.opacity = 0;
-
-        setTimeout(() => {
-            notification.remove();
-            activeNotifications = activeNotifications.filter(msg => msg !== message);
-
-            // Reposition remaining notifications
-            document.querySelectorAll('.notification').forEach((element, index) => {
-                element.style.top = `${20 + index * 70}px`;
-            });
-        }, 300);
-    }, 3000);
-}
-
-// Kullanıcı arayüzü işlemleri
+// USER interface Operations
 document.addEventListener('DOMContentLoaded', () => {
     // Bypass login and initialize app immediately
     const defaultUser = {
@@ -77,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Hide login form and show main app (just in case)
+    const loginForm = document.getElementById('loginForm');
+    const mainApp = document.getElementById('mainApp');
     if (loginForm) loginForm.classList.add('hidden');
     if (mainApp) mainApp.classList.remove('hidden');
 
@@ -84,82 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize form handlers when the document loads
     initializeFormHandlers();
-});
 
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-    // Only work when main app is visible (not on login screen)
-    if (document.getElementById('mainApp').classList.contains('hidden')) {
-        return;
-    }
-
-    // Check if user is typing in an input field
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        return;
-    }
-
-    switch (e.key) {
-        case 'F1':
-            e.preventDefault();
-            // Focus barcode input
-            const barcodeInput = document.getElementById('barcodeInput');
-            if (barcodeInput) {
-                barcodeInput.focus();
-                showNotification('Barkod tarama alanına odaklanıldı', 'info');
-            }
-            break;
-
-        case 'F2':
-            e.preventDefault();
-            // Go to product list
-            showProducts();
-            showNotification('Ürün listesi açıldı (F2)', 'info');
-            break;
-
-        case 'F3':
-            e.preventDefault();
-            // Go to sales
-            showSales();
-            showNotification('Satışlar sayfası açıldı (F3)', 'info');
-            break;
-
-        case 'F4':
-            e.preventDefault();
-            // Add new product
-            addProduct();
-            showNotification('Yeni ürün ekleme sayfası açıldı (F4)', 'info');
-            break;
-
-        case 'F5':
-            e.preventDefault();
-            // Go to daily report
-            getDailyReport();
-            showNotification('Gün sonu raporu açıldı (F5)', 'info');
-            break;
-
-        case 'F6':
-            e.preventDefault();
-            // Go to barcode generator
-            showBarcodeGenerator();
-            showNotification('Barkod üretici açıldı (F6)', 'info');
-            break;
-
-        case 'F10':
-            e.preventDefault();
-            // Complete sale
-            completeSale();
-            showNotification('Satış tamamlanıyor... (F10)', 'info');
-            break;
-
-        case 'Escape':
-            e.preventDefault();
-            // Return to main menu
-            showMainMenu();
-            if (activeNotifications.length === 0) { // Don't spam notifications
-                showNotification('Ana menüye dönüldü (ESC)', 'info');
-            }
-            break;
-    }
+    // Initialize keyboard shortcuts (from keyboard-shortcuts.js)
+    initializeKeyboardShortcuts();
 });
 
 // Logout function converted to Reload/Exit
@@ -250,18 +114,11 @@ function setupFormEventListeners() {
                         }
                     });
                 });
-                                barkod: barcodeInput ? barcodeInput.value : document.getElementById('newBarkod').value,
-                                miktar: stockVal
-                            });
-                            totalStok += stockVal;
-                        }
-                    });
-                }
+            }
 
-                if (bedenler.length === 0) {
-                    showNotification('En az bir beden ve miktar seçmelisiniz!', 'error');
-                    return;
-                }
+            if (bedenler.length === 0) {
+                showNotification('En az bir beden ve miktar seçmelisiniz!', 'error');
+                return;
             } else {
                 totalStok = parseInt(document.getElementById('newStokMiktari').value) || 0;
             }
@@ -683,13 +540,13 @@ async function loadStatistics() {
     try {
         // Kullanıcı oturumu kapatmış olabilir, bu durumda güncellemeyi atla
         if (!currentUser) {
-            console.log('Kullanıcı oturumu kapandı, istatistik güncelleme atlanıyor');
+            // console.log('Kullanıcı oturumu kapandı, istatistik güncelleme atlanıyor');
             return;
         }
 
         // getDailyReport verileri doğrudan kullanılıyor - getStatistics yerine
         const dailyData = await window.electronAPI.getDailyReport();
-        console.log('Loaded Daily Report statistics:', dailyData);
+        // console.log('Loaded Daily Report statistics:', dailyData);
 
         // Update quick stats display using specific IDs for better targeting
         const saleCountElement = document.getElementById('statsToplamSatis');
@@ -728,11 +585,11 @@ function startAutomaticStatsUpdates() {
 
     // Her 30 saniyede bir istatistikleri güncelle
     statsUpdateTimer = setInterval(async () => {
-        console.log('Otomatik istatistik güncellemesi yapılıyor...');
+        // console.log('Otomatik istatistik güncellemesi yapılıyor...');
         await loadStatistics();
     }, 30000); // 30 saniye
 
-    console.log('Otomatik istatistik güncellemeleri başlatıldı - her 30 saniyede bir güncellenecek');
+    // console.log('Otomatik istatistik güncellemeleri başlatıldı - her 30 saniyede bir güncellenecek');
 }
 
 // İstatistik güncellemelerini durdur (örneğin logout olduğunda)
@@ -1739,13 +1596,81 @@ function removeFromCart(index) {
 }
 
 // Complete Sale
-async function completeSale() {
+// Complete Sale - Opens Payment Modal
+function completeSale() {
     if (cart.length === 0) {
         showNotification('Sepet boş!', 'error');
         return;
     }
 
     const totalAmount = cart.reduce((sum, item) => sum + item.toplamFiyat, 0);
+
+    // Update modal UI
+    document.getElementById('paymentTotalAmount').textContent = totalAmount.toFixed(2);
+    document.getElementById('receivedAmount').value = '';
+    document.getElementById('changeAmount').textContent = '0.00 ₺';
+    document.getElementById('changeAmount').className = 'text-2xl font-bold text-gray-500';
+
+    // Show modal
+    const modal = document.getElementById('paymentModal');
+    modal.classList.remove('hidden');
+
+    // Auto focus input
+    setTimeout(() => {
+        document.getElementById('receivedAmount').focus();
+    }, 100);
+}
+
+function closePaymentModal() {
+    document.getElementById('paymentModal').classList.add('hidden');
+}
+
+function calculateChange() {
+    const totalAmount = cart.reduce((sum, item) => sum + item.toplamFiyat, 0);
+    const receivedAmount = parseFloat(document.getElementById('receivedAmount').value) || 0;
+    const changeAmount = document.getElementById('changeAmount');
+
+    if (receivedAmount >= totalAmount) {
+        const change = receivedAmount - totalAmount;
+        changeAmount.textContent = `${change.toFixed(2)} ₺`;
+        changeAmount.className = 'text-2xl font-bold text-green-600';
+    } else {
+        const missing = totalAmount - receivedAmount;
+        changeAmount.textContent = `Eksik: ${missing.toFixed(2)} ₺`;
+        changeAmount.className = 'text-2xl font-bold text-red-600';
+    }
+}
+
+function setReceivedAmount(amount) {
+    const totalAmount = cart.reduce((sum, item) => sum + item.toplamFiyat, 0);
+    const input = document.getElementById('receivedAmount');
+
+    if (amount === 'exact') {
+        input.value = totalAmount.toFixed(2);
+    } else {
+        input.value = amount;
+    }
+
+    calculateChange();
+    document.getElementById('receivedAmount').focus();
+}
+
+async function confirmPaymentAndPrint() {
+    const totalAmount = cart.reduce((sum, item) => sum + item.toplamFiyat, 0);
+    let receivedAmount = parseFloat(document.getElementById('receivedAmount').value);
+
+    // If no amount entered, assume exact amount (cash)
+    if (!receivedAmount || receivedAmount < totalAmount) {
+        // Optional: Block sale if amount is insufficient? 
+        // For now, if empty, assume exact cash. If explicitly less, warn user.
+        if (document.getElementById('receivedAmount').value && receivedAmount < totalAmount) {
+            showNotification('Ödenen miktar yetersiz!', 'error');
+            return;
+        }
+        receivedAmount = totalAmount;
+    }
+
+    const changeAmount = receivedAmount - totalAmount;
 
     try {
         const saleId = await window.electronAPI.saveSale({
@@ -1756,13 +1681,16 @@ async function completeSale() {
 
         if (saleId) {
             showNotification('Satış başarıyla tamamlandı!', 'success');
+            closePaymentModal();
 
-            // Print receipt
+            // Print receipt with payment details
             try {
                 await window.electronAPI.printSaleReceipt({
                     saleId: saleId,
                     items: cart,
-                    totalAmount: totalAmount
+                    totalAmount: totalAmount,
+                    receivedAmount: receivedAmount,
+                    changeAmount: changeAmount
                 });
                 showNotification('Fiş yazdırılıyor...', 'info');
             } catch (printError) {
@@ -1772,11 +1700,7 @@ async function completeSale() {
 
             cart = [];
             updateCartDisplay();
-
-            // Refresh statistics after sale is completed
             await loadStatistics();
-
-            // Don't focus barcode input after successful sale completion
         }
     } catch (error) {
         console.error('Sale error:', error);
@@ -1843,14 +1767,14 @@ async function editProduct(id) {
                                     <div class="text-xs text-gray-500 mb-2">Genel Renkler:</div>
                                     <div class="flex flex-wrap gap-2">
                                         ${['Siyah', 'Beyaz', 'Kırmızı', 'Mavi', 'Yeşil', 'Sarı', 'Turuncu', 'Pembe', 'Mor', 'Lacivert', 'Bej', 'Gri', 'Kahverengi', 'Bordo', 'Turkuaz'].map(renk => {
-                                            const isChecked = product.bedenler && product.bedenler.some(b => b.renk === renk);
-                                            return `
+            const isChecked = product.bedenler && product.bedenler.some(b => b.renk === renk);
+            return `
                                                 <label class="inline-flex items-center p-1 px-2 bg-white border rounded hover:bg-indigo-50 cursor-pointer transition-colors text-xs">
                                                     <input type="checkbox" class="edit-color-checkbox form-checkbox h-3 w-3 text-indigo-600" value="${renk}" ${isChecked ? 'checked' : ''} onchange="updateEditStockInputs()">
                                                     <span class="ml-1 text-xs text-gray-700">${renk}</span>
                                                 </label>
                                             `;
-                                        }).join('')}
+        }).join('')}
                                     </div>
                                     <div class="mt-2">
                                         <label class="block text-xs text-gray-600 mb-1">Diğer Renk Ekle:</label>
@@ -2657,6 +2581,39 @@ function showBarcodeGenerator() {
     `;
 }
 
+// İndirim inputlarını senkronize et
+function syncDiscountInputs(source) {
+    const priceInput = document.getElementById('barcodeSatisFiyati');
+    const percentInput = document.getElementById('barcodeIndirim');
+    const discountedPriceInput = document.getElementById('barcodeIndirimliFiyat');
+
+    const price = parseFloat(priceInput.value) || 0;
+
+    if (source === 'price') {
+        // Fiyat değiştiğinde, eğer yüzde varsa yeni fiyatı güncelle
+        const percent = parseFloat(percentInput.value) || 0;
+        if (price > 0) {
+            const discountedPrice = price - (price * percent / 100);
+            discountedPriceInput.value = discountedPrice.toFixed(2);
+        }
+    } else if (source === 'percent') {
+        // Yüzde değiştiğinde, indirimli fiyatı güncelle
+        const percent = parseFloat(percentInput.value) || 0;
+        if (price > 0) {
+            const discountedPrice = price - (price * percent / 100);
+            discountedPriceInput.value = discountedPrice.toFixed(2);
+        }
+    } else if (source === 'discountedPrice') {
+        // İndirimli fiyat değiştiğinde, yüzdeyi güncelle
+        const discountedPrice = parseFloat(discountedPriceInput.value) || 0;
+        if (price > 0 && discountedPrice <= price) {
+            const discountAmount = price - discountedPrice;
+            const percent = (discountAmount / price) * 100;
+            percentInput.value = percent.toFixed(1);
+        }
+    }
+}
+
 // Barkod modu seçimi
 async function selectBarcodeMode(mode) {
     const formArea = document.getElementById('barcodeFormArea');
@@ -2694,16 +2651,27 @@ async function selectBarcodeMode(mode) {
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Satış Fiyatı (TL) *</label>
-                            <input type="number" id="barcodeSatisFiyati" step="0.01" min="0" required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">İndirim (%)</label>
-                            <input type="number" id="barcodeIndirim" min="0" max="100" value="0" step="0.1"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <div class="col-span-2">
+                            <div class="grid grid-cols-3 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Satış Fiyatı (TL) *</label>
+                                    <input type="number" id="barcodeSatisFiyati" step="0.01" min="0" required
+                                        oninput="syncDiscountInputs('price')"
+                                        class="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">İndirim Oranı (%)</label>
+                                    <input type="number" id="barcodeIndirim" min="0" max="100" value="0" step="0.1"
+                                        oninput="syncDiscountInputs('percent')"
+                                        class="w-full px-4 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-orange-600 font-bold">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">SATIŞ İNDİRİMLİ FİYAT</label>
+                                    <input type="number" id="barcodeIndirimliFiyat" step="0.01" min="0"
+                                        oninput="syncDiscountInputs('discountedPrice')"
+                                        class="w-full px-4 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-green-50 text-green-700 font-black text-lg">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2854,8 +2822,8 @@ async function selectBarcodeMode(mode) {
                     sizeCountsDiv.innerHTML = `
                         <div class="col-span-2 text-sm font-bold text-gray-600 mb-1 border-bottom">Bedenlere Göre Barkod Adedi</div>
                         ${product.bedenler.map(b => {
-                            const key = b.renk ? `${b.beden}_${b.renk}` : b.beden;
-                            return `
+                        const key = b.renk ? `${b.beden}_${b.renk}` : b.beden;
+                        return `
                             <div class="flex items-center space-x-2 bg-blue-50 p-2 rounded border border-blue-100">
                                 <div class="flex flex-col">
                                     <span class="text-sm font-bold text-blue-700">${b.beden}</span>
@@ -2889,6 +2857,11 @@ async function handleNewProductBarcode(e) {
     const alisFiyati = parseFloat(document.getElementById('barcodeAlisFiyati').value);
     const satisFiyati = parseFloat(document.getElementById('barcodeSatisFiyati').value);
     const indirim = parseFloat(document.getElementById('barcodeIndirim').value) || 0;
+
+    let indirimliFiyat = null;
+    if (indirim > 0) {
+        indirimliFiyat = satisFiyati - (satisFiyati * indirim / 100);
+    }
 
     const bedenler = [];
     const printItems = [];
@@ -2929,13 +2902,26 @@ async function handleNewProductBarcode(e) {
                             totalStok += stockVal;
 
                             if (countVal > 0) {
+                                // Beden aralığını hesapla
+                                const allCheckedSizes = Array.from(document.querySelectorAll('.barcode-size-checkbox:checked'))
+                                    .map(cb => parseInt(cb.value))
+                                    .filter(val => !isNaN(val))
+                                    .sort((a, b) => a - b);
+
+                                let bedenAraligi = '';
+                                if (allCheckedSizes.length > 0) {
+                                    bedenAraligi = `${allCheckedSizes[0]}-${allCheckedSizes[allCheckedSizes.length - 1]}`;
+                                }
+
                                 printItems.push({
                                     barkod: uniqueBarcode,
                                     urunAdi: urunAdi,
                                     kategori: kategori,
                                     beden: size,
+                                    bedenAraligi: bedenAraligi,
                                     renk: color,
                                     satisFiyati: satisFiyati,
+                                    indirimliFiyat: indirimliFiyat,
                                     adet: countVal
                                 });
                             }
@@ -2963,6 +2949,7 @@ async function handleNewProductBarcode(e) {
                             kategori: kategori,
                             beden: size,
                             satisFiyati: satisFiyati,
+                            indirimliFiyat: indirimliFiyat,
                             adet: countVal
                         });
                     }
@@ -3034,17 +3021,31 @@ async function handleExistingProductBarcode(e) {
         }
 
         if (product.bedenler && product.bedenler.length > 0) {
+            // Mevcut ürün beden aralığını bul
+            let bedenAraligi = '';
+            const sizes = product.bedenler.map(b => parseInt(b.beden)).filter(val => !isNaN(val)).sort((a, b) => a - b);
+            if (sizes.length > 0) {
+                bedenAraligi = `${sizes[0]}-${sizes[sizes.length - 1]}`;
+            }
+
             product.bedenler.forEach(b => {
                 const key = b.renk ? `${b.beden}_${b.renk}` : b.beden;
                 const countVal = parseInt(document.getElementById(`existing_barcode_count_${key}`).value) || 0;
                 if (countVal > 0) {
+                    let indirimliFiyat = null;
+                    if (product.indirim && product.indirim > 0) {
+                        indirimliFiyat = product.satisFiyati - (product.satisFiyati * product.indirim / 100);
+                    }
+
                     printItems.push({
                         barkod: b.barkod || product.barkod,
                         urunAdi: product.urunAdi,
                         kategori: product.kategori || 'Kıyafet',
                         beden: b.beden,
+                        bedenAraligi: bedenAraligi,
                         renk: b.renk || '',
                         satisFiyati: product.satisFiyati,
+                        indirimliFiyat: indirimliFiyat,
                         adet: countVal
                     });
                 }
@@ -3052,12 +3053,18 @@ async function handleExistingProductBarcode(e) {
         } else {
             const countVal = parseInt(document.getElementById('existingBarcodeAdet').value) || 0;
             if (countVal > 0) {
+                let indirimliFiyat = null;
+                if (product.indirim && product.indirim > 0) {
+                    indirimliFiyat = product.satisFiyati - (product.satisFiyati * product.indirim / 100);
+                }
+
                 printItems.push({
                     barkod: product.barkod,
                     urunAdi: product.urunAdi,
                     kategori: product.kategori || 'Kıyafet',
                     beden: product.beden || '',
                     satisFiyati: product.satisFiyati,
+                    indirimliFiyat: indirimliFiyat,
                     adet: countVal
                 });
             }
@@ -3097,14 +3104,87 @@ function showBarcodePreview(items) {
 
     items.forEach(item => {
         for (let i = 0; i < item.adet; i++) {
+            const price = parseFloat(item.satisFiyati || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            // Ürün adına göre font büyüklüğünü ölçekle (Min 7px, Max 11px)
+            let nameFontSize = '11px';
+            const nameLen = (item.urunAdi || '').length;
+            const sizeRange = item.bedenAraligi || item.beden || '';
+            if (nameLen > 25) {
+                nameFontSize = '9px';
+            }
+            if (nameLen > 40) {
+                nameFontSize = '8px';
+            }
+            if (nameLen > 60) {
+                nameFontSize = '7px';
+            }
+
             barcodesHTML += `
-                <div class="barcode-item bg-white border-2 border-black w-full flex flex-col text-center" style="width: 80px; height: 116px;">
-                    <div class="product-name font-bold text-black w-full border-b border-black text-xs leading-tight p-1 break-words" style="font-size: 6pt; line-height: 1.2;">${item.urunAdi}</div>
-                    ${item.renk ? `<div class="product-color font-bold text-black w-full border-b border-black text-xs p-0.5" style="font-size: 6pt; line-height: 1.2;">${item.renk}</div>` : ''}
-                    ${item.beden ? `<div class="product-size font-black text-black w-full border-b border-black text-sm p-0.5" style="font-size: 8pt; line-height: 1.2;">${item.beden} BEDEN</div>` : ''}
-                    <div class="product-price font-black text-black w-full border-b border-black p-0.5" style="font-size: 12pt; line-height: 1.2;">${parseFloat(item.satisFiyati || 0).toFixed(2)} TL</div>
-                    <svg id="barcode-${globalIndex}" class="barcode-svg flex-1"></svg>
-                    <div class="store-name font-black text-black w-full p-0.5" style="font-size: 8pt; line-height: 1.2;">NİSA TESETTÜR</div>
+                <div class="barcode-item bg-white overflow-hidden" 
+                     style="width: 38mm; height: 54mm; box-sizing: border-box; margin: 2mm 0 0 0.5mm; padding: 0; border: 0;">
+                    
+                    <table style="width: 100%; height: 100%; border-collapse: collapse; border: 2px solid black; table-layout: fixed;">
+                        <!-- Row 1: Name and Beden Header -->
+                        <tr style="height: 15%;">
+                            <td style="width: 70%; border: 2px solid black; padding: 1px; font-size: ${nameFontSize}; font-weight: bold; text-align: center; vertical-align: middle; line-height: 1; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">
+                                ${item.urunAdi}
+                            </td>
+                            <td style="width: 30%; border: 2px solid black; padding: 0px; font-size: 8px; font-weight: bold; text-align: center; vertical-align: middle;">
+                                BEDEN
+                            </td>
+                        </tr>
+                        <!-- Row 2: Color and Specific Size Value -->
+                        <tr style="height: 10%;">
+                            <td style="border: 2px solid black; padding: 0px; font-size: 8px; font-weight: bold; text-align: center; vertical-align: middle;">
+                                ${item.renk || '-'}
+                            </td>
+                            <td style="border: 2px solid black; padding: 0px; font-size: 11px; font-weight: 900; text-align: center; vertical-align: middle;">
+                                ${item.beden || 'STD'}
+                            </td>
+                        </tr>
+                        <!-- Row 3: Size Range -->
+                         <tr style="height: 8%;">
+                            <td colspan="2" style="border: 2px solid black; padding: 0px; font-size: 8px; font-weight: 800; text-align: center; vertical-align: middle;">
+                                BEDEN/SİZE (${sizeRange})
+                            </td>
+                         </tr>
+                        
+                        <!-- Row 4: Barcode (Code128) - Centered with padding -->
+                         <tr style="height: 28%;">
+                            <td colspan="2" style="border: 2px solid black; padding: 4px; text-align: center; vertical-align: middle;">
+                                <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; overflow: hidden;">
+                                    <svg id="barcode-${globalIndex}" class="barcode-svg" style="width: 85%; height: 100%;"></svg>
+                                </div>
+                            </td>
+                         </tr>
+                         
+                        <!-- Row 5: Price and QR Code -->
+                         <tr style="height: 25%;">
+                            <td colspan="2" style="border: 2px solid black; padding: 0;">
+                                <div style="display: flex; height: 100%;">
+                                    <div style="width: 65%; display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 2px solid black;">
+                                        ${item.indirimliFiyat < item.satisFiyati && item.indirimliFiyat > 0 ? `
+                                            <div style="text-decoration: line-through; font-size: 9px; font-weight: bold; color: black; line-height: 1; margin-bottom: 0px; white-space: nowrap;">${price} ₺</div>
+                                            <div style="font-size: 13px; font-weight: 900; line-height: 1; white-space: nowrap;">${parseFloat(item.indirimliFiyat).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺</div>
+                                        ` : `
+                                            <div style="font-size: 13px; font-weight: 900; white-space: nowrap;">${price} ₺</div>
+                                        `}
+                                        <div style="font-size: 7px; font-weight: bold; margin-top: 1px;">KDV DAHİL</div>
+                                    </div>
+                                    <div style="width: 35%; display: flex; justify-content: center; align-items: center; padding: 1px;">
+                                        <img src="qr.jpeg" style="max-width: 100%; max-height: 100%; object-fit: contain;" alt="QR">
+                                    </div>
+                                </div>
+                            </td>
+                         </tr>
+
+                        <!-- Row 6: Store Name - Fixed Overflow -->
+                         <tr style="height: 14%;">
+                            <td colspan="2" style="border: 2px solid black; padding: 0; text-align: center; vertical-align: middle; font-size: 9px; font-weight: 900; letter-spacing: 0.5px; line-height: 1;">
+                                NİSA TESETTÜR
+                            </td>
+                         </tr>
+                    </table>
                 </div>
             `;
             globalIndex++;
@@ -3113,14 +3193,6 @@ function showBarcodePreview(items) {
 
     // Preview container logic
     formArea.innerHTML = `
-        <style>
-            .barcode-item .barcode-svg {
-                width: 95% !important;
-                max-width: 75px !important;
-                height: auto !important;
-                margin: 2px auto !important;
-            }
-        </style>
         <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-300">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-green-800 flex items-center">
@@ -3139,13 +3211,13 @@ function showBarcodePreview(items) {
                 </div>
             </div>
 
-            <div id="barcodePreviewArea" class="grid grid-cols-4 gap-4 max-h-96 overflow-y-auto">
+            <div id="barcodePreviewArea" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
                 ${barcodesHTML}
             </div>
         </div>
     `;
 
-    // Draw barcodes with preview size
+    // Draw barcodes with preview size (same as print format)
     setTimeout(() => {
         let currentIdx = 0;
         items.forEach(item => {
@@ -3153,15 +3225,15 @@ function showBarcodePreview(items) {
                 try {
                     JsBarcode(`#barcode-${currentIdx}`, item.barkod, {
                         format: 'CODE128',
-                        width: 1.5,
-                        height: 25,
+                        width: 2,
+                        height: 35,
                         displayValue: true,
-                        fontSize: 8,
-                        margin: 0,
-                        textMargin: 0
+                        fontSize: 9,
+                        margin: 2,
+                        textMargin: 1
                     });
                 } catch (err) {
-                    console.error('JsBarcode hatası:', err);
+                    console.error('JsBarcode error:', err);
                 }
                 currentIdx++;
             }
@@ -3170,164 +3242,37 @@ function showBarcodePreview(items) {
 }
 
 // Barkodları yazdır (40x58mm Termal Etiket - DİKEY)
-function printBarcodes() {
+// Barkod yazdırma fonksiyonu (IPC ile ana sürece gönderir)
+async function printBarcodes() {
     // Preview alanındaki itemları al
     const barcodeItems = document.querySelectorAll('.barcode-item');
-    let printContent = '';
+    if (barcodeItems.length === 0) {
+        showNotification('Yazdırılacak barkod bulunamadı!', 'error');
+        return;
+    }
 
+    let printContent = '';
     barcodeItems.forEach(item => {
         // Preview için olan classları temizleyip, sadece içeriği kopyalıyoruz
         const clone = item.cloneNode(true);
-        clone.classList.remove('bg-white', 'p-2', 'border', 'border-gray-300', 'rounded', 'w-full', 'h-full');
-        clone.classList.add('print-item');
-        printContent += clone.outerHTML;
+        // Remove bg-white for print
+        clone.classList.remove('bg-white');
+
+        // Wrap in print-item div which has page-break-after style in main.js
+        printContent += `<div class="print-item">${clone.innerHTML}</div>`;
     });
 
-    const printWindow = window.open('', '', 'height=600,width=800');
-
-    printWindow.document.write(`
-        <html>
-        <head>
-            <title>Barkod Yazdırma</title>
-            <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-
-                @media print {
-                    @page {
-                        size: 40mm 58mm; /* 40x58mm DİKEY */
-                        margin: 0mm;
-                    }
-                    html, body {
-                        width: 40mm;
-                        height: 58mm;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
-                    body::after { content: none !important; }
-
-                    .print-item {
-                        width: 40mm;
-                        height: 58mm;
-
-                        /* İçerik hizalama */
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: space-between;
-                        text-align: center;
-
-                        margin: 0 !important;
-                        padding: 2mm 1mm 1mm 1mm !important;
-
-                        page-break-after: always;
-                        overflow: hidden;
-                        border: none !important;
-                    }
-
-                    .print-item:last-child {
-                        page-break-after: auto;
-                    }
-                }
-
-                body { font-family: Arial, sans-serif; }
-
-                /* --- İÇERİK AYARLARI (TABLO YAPISI - 58mm YÜKSEKLİK) --- */
-
-                /* Tablo Hücreleri - Ortak Stil */
-                .product-name,
-                .product-color,
-                .product-size,
-                .product-price,
-                .store-name {
-                    border: 0.5pt solid #000 !important;
-                    background: #fff !important;
-                    padding: 0.5mm 1mm !important;
-                    width: 100% !important;
-                    margin: 0 !important;
-                }
-
-                /* Ürün Adı - Tablo Hücresi */
-                .product-name {
-                    font-size: 6pt !important;
-                    font-weight: bold !important;
-                    text-transform: uppercase !important;
-                    line-height: 1.2 !important;
-
-                    word-wrap: break-word !important;
-                    overflow-wrap: break-word !important;
-                    max-height: 9mm !important;
-                    display: -webkit-box !important;
-                    -webkit-line-clamp: 2 !important;
-                    -webkit-box-orient: vertical !important;
-                    border-bottom: none !important;
-                }
-
-                /* Renk - Tablo Hücresi */
-                .product-color {
-                    font-size: 6pt !important;
-                    font-weight: bold !important;
-                    line-height: 1.2 !important;
-                    border-bottom: none !important;
-                }
-
-                /* Beden - Tablo Hücresi */
-                .product-size {
-                    font-size: 8pt !important;
-                    font-weight: 900 !important;
-                    text-transform: uppercase !important;
-                    line-height: 1.2 !important;
-                    border-bottom: none !important;
-                }
-
-                /* Fiyat - Tablo Hücresi */
-                .product-price {
-                    font-size: 14pt !important;
-                    font-weight: 900 !important;
-                    line-height: 1.2 !important;
-                    border-bottom: none !important;
-                }
-
-                /* Barkod Çizgileri - Tablo Hücresi İçi */
-                .barcode-svg {
-                    width: 95% !important;
-                    height: 14mm !important;
-                    max-width: 38mm !important;
-                    display: block;
-                    margin: 1mm auto !important;
-                }
-
-                /* Mağaza Adı - Tablo Hücresi */
-                .store-name {
-                    font-size: 9pt !important;
-                    font-weight: 900 !important;
-                    text-transform: uppercase !important;
-                    line-height: 1.2 !important;
-                    letter-spacing: -0.3px !important;
-                }
-            </style>
-        </head>
-        <body>
-            <div id="print-container">
-                ${printContent}
-            </div>
-        </body>
-        </html>
-    `);
-
-    printWindow.document.close();
-    printWindow.focus();
-
-    // Resim/Font yüklenmesi için ufak gecikme
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 500);
-
-    showNotification('Barkodlar yazdırma için hazırlandı!', 'success');
+    try {
+        const result = await window.electronAPI.printProductLabel(printContent);
+        if (result.success) {
+            showNotification('Barkodlar başarıyla yazdırıldı veya kuyruğa eklendi.');
+        } else {
+            showNotification('Barkod yazdırma hatası: ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Print barcode error:', error);
+        showNotification('Yazdırma işlemi sırasında bir hata oluştu.', 'error');
+    }
 }
 
 // Helper to toggle size selection in barcode generator
