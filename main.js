@@ -1082,23 +1082,35 @@ ipcMain.handle('printProductLabel', async (event, htmlContent) => {
         // Read QR code image and convert to base64
         let qrBase64 = '';
         try {
-            // Check both local path (dev) and resources path (prod)
             const path = require('path');
             const fs = require('fs');
 
-            let qrPath = path.join(__dirname, 'qr.jpeg'); // Dev/Default
+            // Production path (build aldıktan sonra burası kullanılır)
+            const productionQrPath = path.join(process.resourcesPath, 'qr.jpeg');
 
-            // In production with extraResources, likely adjacent to resources or inside it
-            // Electron resources path: process.resourcesPath
-            const resourcesQrPath = path.join(process.resourcesPath, 'qr.jpeg');
+            // Development paths
+            const devQrPath = path.join(__dirname, 'qr.jpeg');
+            const userDevQrPath = 'C:\\Users\\yasin\\OneDrive\\Masaüstü\\nisa tesettür\\nisa-tesettur-barkod\\resources\\qr.jpeg';
 
-            if (fs.existsSync(resourcesQrPath)) {
-                qrPath = resourcesQrPath;
+            let qrPath = null;
+
+            // Check paths in order: Production -> Dev (current dir) -> Dev (user path)
+            if (fs.existsSync(productionQrPath)) {
+                qrPath = productionQrPath;
+                console.log('QR loaded from production path:', productionQrPath);
+            } else if (fs.existsSync(devQrPath)) {
+                qrPath = devQrPath;
+                console.log('QR loaded from dev path:', devQrPath);
+            } else if (fs.existsSync(userDevQrPath)) {
+                qrPath = userDevQrPath;
+                console.log('QR loaded from user dev path:', userDevQrPath);
             }
 
-            if (fs.existsSync(qrPath)) {
+            if (qrPath && fs.existsSync(qrPath)) {
                 const qrData = fs.readFileSync(qrPath);
                 qrBase64 = `data:image/jpeg;base64,${qrData.toString('base64')}`;
+            } else {
+                console.error('QR code not found in any path');
             }
         } catch (err) {
             console.error('Error reading qr.jpeg:', err);
@@ -1162,5 +1174,41 @@ ipcMain.handle('printProductLabel', async (event, htmlContent) => {
     } catch (error) {
         console.error('Label print error:', error);
         return { success: false, message: "Etiket yazdırılırken bir hata oluştu!" };
+    }
+});
+
+// Get QR code as base64 for renderer preview
+ipcMain.handle('getQRBase64', () => {
+    try {
+        const path = require('path');
+        const fs = require('fs');
+
+        // Production path (build aldıktan sonra burası kullanılır)
+        const productionQrPath = path.join(process.resourcesPath, 'qr.jpeg');
+
+        // Development paths
+        const devQrPath = path.join(__dirname, 'qr.jpeg');
+        const userDevQrPath = 'C:\\Users\\yasin\\OneDrive\\Masaüstü\\nisa tesettür\\nisa-tesettur-barkod\\resources\\qr.jpeg';
+
+        let qrPath = null;
+
+        // Check paths in order: Production -> Dev (current dir) -> Dev (user path)
+        if (fs.existsSync(productionQrPath)) {
+            qrPath = productionQrPath;
+        } else if (fs.existsSync(devQrPath)) {
+            qrPath = devQrPath;
+        } else if (fs.existsSync(userDevQrPath)) {
+            qrPath = userDevQrPath;
+        }
+
+        if (qrPath && fs.existsSync(qrPath)) {
+            const qrData = fs.readFileSync(qrPath);
+            return `data:image/jpeg;base64,${qrData.toString('base64')}`;
+        }
+
+        return null;
+    } catch (err) {
+        console.error('Error reading QR for preview:', err);
+        return null;
     }
 });

@@ -16,5 +16,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     resetDailyReport: () => ipcRenderer.invoke('resetDailyReport'),
     printSaleReceipt: (saleData) => ipcRenderer.invoke('printSaleReceipt', saleData),
     printEndOfDayReport: (reportData) => ipcRenderer.invoke('printEndOfDayReport', reportData),
-    printProductLabel: (htmlContent) => ipcRenderer.invoke('printProductLabel', htmlContent)
+    printProductLabel: (htmlContent) => ipcRenderer.invoke('printProductLabel', htmlContent),
+    getQRBase64: () => ipcRenderer.invoke('getQRBase64')
 });

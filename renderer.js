@@ -1791,7 +1791,7 @@ async function editProduct(id) {
 
                             <label class="block text-gray-700 text-sm font-bold mb-2">Bedenler</label>
                             <div class="grid grid-cols-5 gap-2 bg-gray-50 p-3 rounded-lg border">
-                                ${['38', '40', '42', '44', '46', '48', '50', '52', '54', '1', '2', '3', '4', '5', '6'].map(size => {
+                                ${['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '1', '2', '3', '4', '5', '6'].map(size => {
             const isChecked = product.bedenler && product.bedenler.some(b => b.beden === size);
             return `
                                         <label class="flex items-center space-x-1 text-xs cursor-pointer hover:text-indigo-600">
@@ -2703,7 +2703,7 @@ async function selectBarcodeMode(mode) {
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Beden Seçimi (Sayısal)</label>
                             <div class="flex flex-wrap gap-2">
-                                ${[38, 40, 42, 44, 46, 48, 50, 52, 54].map(size => `
+                                ${[36, 38, 40, 42, 44, 46, 48, 50, 52, 54].map(size => `
                                     <label class="inline-flex items-center p-2 bg-gray-50 border rounded hover:bg-indigo-50 cursor-pointer transition-colors">
                                         <input type="checkbox" class="barcode-size-checkbox form-checkbox h-4 w-4 text-indigo-600" value="${size}" onchange="updateBarcodeStockInputs()">
                                         <span class="ml-2 text-sm text-gray-700">${size}</span>
@@ -3096,8 +3096,19 @@ function generateBarcodeNumber() {
 }
 
 // Barkod önizleme ve yazdırma
-function showBarcodePreview(items) {
+async function showBarcodePreview(items) {
     const formArea = document.getElementById('barcodeFormArea');
+
+    // Load QR code as base64 once
+    let qrBase64 = 'qr.jpeg'; // Fallback
+    try {
+        const qr = await window.electronAPI.getQRBase64();
+        if (qr) {
+            qrBase64 = qr;
+        }
+    } catch (err) {
+        console.error('Failed to load QR base64:', err);
+    }
 
     let barcodesHTML = '';
     let globalIndex = 0;
@@ -3172,7 +3183,7 @@ function showBarcodePreview(items) {
                                         <div style="font-size: 7px; font-weight: bold; margin-top: 1px;">KDV DAHİL</div>
                                     </div>
                                     <div style="width: 35%; display: flex; justify-content: center; align-items: center; padding: 1px;">
-                                        <img src="qr.jpeg" style="max-width: 100%; max-height: 100%; object-fit: contain;" alt="QR">
+                                        <img src="${qrBase64}" style="max-width: 100%; max-height: 100%; object-fit: contain;" alt="QR">
                                     </div>
                                 </div>
                             </td>
