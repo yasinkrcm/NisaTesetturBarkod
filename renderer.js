@@ -734,7 +734,7 @@ async function showProducts() {
                                                 ${(p.satisFiyati || 0).toFixed(2)} TL
                                                 ${p.indirim > 0 ?
                 `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${p.indirim} İndirim</span>
-                                                    <div class="text-sm text-gray-400">İndirimsiz: <s>${(p.satisFiyati / (1 - p.indirim / 100)).toFixed(2)} TL</s></div>`
+                                                    <div class="text-sm text-gray-400">İndirimsiz: <s>${(p.satisFiyati * (1 + p.indirim / 100)).toFixed(2)} TL</s></div>`
                 : ''}
                                             </div>
                                         </td>
@@ -2616,7 +2616,7 @@ function syncDiscountInputs(source) {
         // Satış fiyatı değiştiğinde, indirimsiz fiyatı güncelle
         const percent = parseFloat(percentInput.value) || 0;
         if (price > 0 && percent > 0 && percent < 100) {
-            const fullPrice = price / (1 - percent / 100);
+            const fullPrice = price * (1 + percent / 100);
             fullPriceInput.value = fullPrice.toFixed(2);
         } else {
             fullPriceInput.value = '';
@@ -2625,7 +2625,7 @@ function syncDiscountInputs(source) {
         // Yüzde değiştiğinde, indirimsiz fiyatı güncelle
         const percent = parseFloat(percentInput.value) || 0;
         if (price > 0 && percent > 0 && percent < 100) {
-            const fullPrice = price / (1 - percent / 100);
+            const fullPrice = price * (1 + percent / 100);
             fullPriceInput.value = fullPrice.toFixed(2);
         } else {
             fullPriceInput.value = '';
@@ -2634,7 +2634,7 @@ function syncDiscountInputs(source) {
         // İndirimsiz fiyat değiştiğinde, yüzdeyi hesapla
         const fullPrice = parseFloat(fullPriceInput.value) || 0;
         if (fullPrice > 0 && price > 0 && fullPrice > price) {
-            const percent = (1 - price / fullPrice) * 100;
+            const percent = ((fullPrice / price) - 1) * 100;
             percentInput.value = percent.toFixed(1);
         }
     }
@@ -2900,7 +2900,7 @@ async function handleNewProductBarcode(e) {
 
     let indirimsizFiyat = null;
     if (indirim > 0 && indirim < 100) {
-        indirimsizFiyat = satisFiyati / (1 - indirim / 100);
+        indirimsizFiyat = satisFiyati * (1 + indirim / 100);
     }
 
     const bedenler = [];
@@ -3074,7 +3074,7 @@ async function handleExistingProductBarcode(e) {
                 if (countVal > 0) {
                     let indirimsizFiyat = null;
                     if (product.indirim && product.indirim > 0 && product.indirim < 100) {
-                        indirimsizFiyat = product.satisFiyati / (1 - product.indirim / 100);
+                        indirimsizFiyat = product.satisFiyati * (1 + product.indirim / 100);
                     }
 
                     printItems.push({
@@ -3095,7 +3095,7 @@ async function handleExistingProductBarcode(e) {
             if (countVal > 0) {
                 let indirimsizFiyat = null;
                 if (product.indirim && product.indirim > 0 && product.indirim < 100) {
-                    indirimsizFiyat = product.satisFiyati / (1 - product.indirim / 100);
+                    indirimsizFiyat = product.satisFiyati * (1 + product.indirim / 100);
                 }
 
                 printItems.push({
