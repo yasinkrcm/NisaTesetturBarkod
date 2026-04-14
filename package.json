@@ -1,6 +1,6 @@
 {
   "name": "nisa-tesettur-barkod",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Barkod Otomasyon Sistemi",
   "main": "main.js",
   "scripts": {
