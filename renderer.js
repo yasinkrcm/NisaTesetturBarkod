@@ -734,7 +734,7 @@ async function showProducts() {
                                                 ${(p.satisFiyati || 0).toFixed(2)} TL
                                                 ${p.indirim > 0 ?
                 `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${p.indirim} İndirim</span>
-                                                    <div class="text-sm text-red-500">İndirimli: ${(p.satisFiyati * (1 - p.indirim / 100)).toFixed(2)} TL</div>`
+                                                    <div class="text-sm text-gray-400">İndirimsiz: <s>${(p.satisFiyati / (1 - p.indirim / 100)).toFixed(2)} TL</s></div>`
                 : ''}
                                             </div>
                                         </td>
@@ -964,7 +964,7 @@ function addProduct() {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">İndirim (%)</label>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">İndirim (%) <span class="text-xs text-orange-500 font-normal">- Sadece Barkod İçin</span></label>
                             <input type="number" step="0.01" id="newIndirim" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" min="0" max="100" value="0">
                         </div>
                     </div>
@@ -972,11 +972,22 @@ function addProduct() {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Alış Fiyatı</label>
-                            <input type="number" step="0.01" id="newAlisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
+                            <input type="number" step="0.01" id="newAlisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" oninput="calculateAutoPrice('add')">
                         </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Satış Fiyatı</label>
                             <input type="number" step="0.01" id="newSatisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" id="newAutoPrice" onchange="toggleAutoPrice('add')" class="form-checkbox h-4 w-4 text-amber-600 rounded mr-2">
+                            <span class="text-sm font-bold text-amber-800"><i class="fas fa-calculator mr-1"></i> Kar Yüzdesine göre otomatik fiyat gir</span>
+                        </label>
+                        <div id="newKarYuzdesiDiv" class="hidden mt-3">
+                            <label class="block text-gray-700 text-sm font-bold mb-1">Kar Yüzdesi (%)</label>
+                            <input type="number" step="0.01" id="newKarYuzdesi" class="w-full px-3 py-2 border border-amber-300 rounded-lg focus:border-amber-500 focus:outline-none transition-colors bg-white font-bold text-amber-700" min="0" oninput="calculateAutoPrice('add')" placeholder="Örn: 50">
                         </div>
                     </div>
 
@@ -1572,10 +1583,10 @@ async function updateItemQuantity(index, newQuantity) {
             return;
         }
 
-        // Update the item's discount in case it was changed in the product
-        if (product && product.indirim !== undefined) {
-            item.indirim = product.indirim;
-        }
+        // İndirim sadece barkod için kullanılır, sepete otomatik uygulanmaz
+        // if (product && product.indirim !== undefined) {
+        //     item.indirim = product.indirim;
+        // }
     } catch (error) {
         console.error('Error checking stock:', error);
     }
@@ -1817,18 +1828,28 @@ async function editProduct(id) {
                         </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Alış Fiyatı</label>
-                            <input type="number" step="0.01" id="editAlisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.alisFiyati}">
+                            <input type="number" step="0.01" id="editAlisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.alisFiyati}" oninput="calculateAutoPrice('edit')">
                         </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Satış Fiyatı</label>
                             <input type="number" step="0.01" id="editSatisFiyati" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.satisFiyati}">
+                        </div>
+                        <div class="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="editAutoPrice" onchange="toggleAutoPrice('edit')" class="form-checkbox h-4 w-4 text-amber-600 rounded mr-2">
+                                <span class="text-sm font-bold text-amber-800"><i class="fas fa-calculator mr-1"></i> Kar Yüzdesine göre otomatik fiyat gir</span>
+                            </label>
+                            <div id="editKarYuzdesiDiv" class="hidden mt-3">
+                                <label class="block text-gray-700 text-sm font-bold mb-1">Kar Yüzdesi (%)</label>
+                                <input type="number" step="0.01" id="editKarYuzdesi" class="w-full px-3 py-2 border border-amber-300 rounded-lg focus:border-amber-500 focus:outline-none transition-colors bg-white font-bold text-amber-700" min="0" oninput="calculateAutoPrice('edit')" placeholder="Örn: 50">
+                            </div>
                         </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Stok Miktarı</label>
                             <input type="number" id="editStokMiktari" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.stokMiktari}">
                         </div>
                         <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">İndirim (%)</label>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">İndirim (%) <span class="text-xs text-orange-500 font-normal">- Sadece Barkod İçin</span></label>
                             <input type="number" step="0.01" id="editIndirim" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" value="${product.indirim || 0}" min="0" max="100">
                         </div>
                         <button type="submit" class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition duration-200 font-medium">
@@ -2377,9 +2398,9 @@ function addToCartWithProduct(product, selectedSize, selectedRenk = '') {
         const displayText = selectedRenk ? `${selectedSize} / ${selectedRenk}` : selectedSize;
         showNotification(`${product.urunAdi} (${displayText}) sepete eklendi!`, 'success');
     } else {
-        const indirim = product.indirim || 0;
-        const discountFactor = 1 - (indirim / 100);
-        const discountedPrice = product.satisFiyati * discountFactor;
+        const indirim = 0; // İndirim sadece barkod için kullanılır, sepete uygulanmaz
+        const discountFactor = 1;
+        const discountedPrice = product.satisFiyati;
 
         cart.push({
             urunId: product.id,
@@ -2581,34 +2602,39 @@ function showBarcodeGenerator() {
     `;
 }
 
-// İndirim inputlarını senkronize et
+// İndirim inputlarını senkronize et - YENİ MANTIK
+// İndirimsiz Fiyat = Satış Fiyatı / (1 - İndirim/100)
+// İndirimli Fiyat = Satış Fiyatı (DB'deki gerçek fiyat)
 function syncDiscountInputs(source) {
     const priceInput = document.getElementById('barcodeSatisFiyati');
     const percentInput = document.getElementById('barcodeIndirim');
-    const discountedPriceInput = document.getElementById('barcodeIndirimliFiyat');
+    const fullPriceInput = document.getElementById('barcodeIndirimsizFiyat');
 
     const price = parseFloat(priceInput.value) || 0;
 
     if (source === 'price') {
-        // Fiyat değiştiğinde, eğer yüzde varsa yeni fiyatı güncelle
+        // Satış fiyatı değiştiğinde, indirimsiz fiyatı güncelle
         const percent = parseFloat(percentInput.value) || 0;
-        if (price > 0) {
-            const discountedPrice = price - (price * percent / 100);
-            discountedPriceInput.value = discountedPrice.toFixed(2);
+        if (price > 0 && percent > 0 && percent < 100) {
+            const fullPrice = price / (1 - percent / 100);
+            fullPriceInput.value = fullPrice.toFixed(2);
+        } else {
+            fullPriceInput.value = '';
         }
     } else if (source === 'percent') {
-        // Yüzde değiştiğinde, indirimli fiyatı güncelle
+        // Yüzde değiştiğinde, indirimsiz fiyatı güncelle
         const percent = parseFloat(percentInput.value) || 0;
-        if (price > 0) {
-            const discountedPrice = price - (price * percent / 100);
-            discountedPriceInput.value = discountedPrice.toFixed(2);
+        if (price > 0 && percent > 0 && percent < 100) {
+            const fullPrice = price / (1 - percent / 100);
+            fullPriceInput.value = fullPrice.toFixed(2);
+        } else {
+            fullPriceInput.value = '';
         }
-    } else if (source === 'discountedPrice') {
-        // İndirimli fiyat değiştiğinde, yüzdeyi güncelle
-        const discountedPrice = parseFloat(discountedPriceInput.value) || 0;
-        if (price > 0 && discountedPrice <= price) {
-            const discountAmount = price - discountedPrice;
-            const percent = (discountAmount / price) * 100;
+    } else if (source === 'fullPrice') {
+        // İndirimsiz fiyat değiştiğinde, yüzdeyi hesapla
+        const fullPrice = parseFloat(fullPriceInput.value) || 0;
+        if (fullPrice > 0 && price > 0 && fullPrice > price) {
+            const percent = (1 - price / fullPrice) * 100;
             percentInput.value = percent.toFixed(1);
         }
     }
@@ -2648,9 +2674,23 @@ async function selectBarcodeMode(mode) {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Alış Fiyatı (TL) *</label>
                             <input type="number" id="barcodeAlisFiyati" step="0.01" min="0" required
+                                oninput="calculateAutoPrice('barcode')"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         
+                        <div class="col-span-2">
+                            <div class="bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200 mb-3">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" id="barcodeAutoPrice" onchange="toggleAutoPrice('barcode')" class="form-checkbox h-4 w-4 text-amber-600 rounded mr-2">
+                                    <span class="text-sm font-bold text-amber-800"><i class="fas fa-calculator mr-1"></i> Kar Yüzdesine göre otomatik fiyat gir</span>
+                                </label>
+                                <div id="barcodeKarYuzdesiDiv" class="hidden mt-2">
+                                    <label class="block text-gray-700 text-sm font-bold mb-1">Kar Yüzdesi (%)</label>
+                                    <input type="number" step="0.01" id="barcodeKarYuzdesi" class="w-full px-3 py-2 border border-amber-300 rounded-lg focus:border-amber-500 focus:outline-none transition-colors bg-white font-bold text-amber-700" min="0" oninput="calculateAutoPrice('barcode')" placeholder="Örn: 50">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="col-span-2">
                             <div class="grid grid-cols-3 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
                                 <div>
@@ -2660,16 +2700,16 @@ async function selectBarcodeMode(mode) {
                                         class="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">İndirim Oranı (%)</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">İndirim Oranı (%) <span class="text-xs text-orange-500">Barkod İçin</span></label>
                                     <input type="number" id="barcodeIndirim" min="0" max="100" value="0" step="0.1"
                                         oninput="syncDiscountInputs('percent')"
                                         class="w-full px-4 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-orange-600 font-bold">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">SATIŞ İNDİRİMLİ FİYAT</label>
-                                    <input type="number" id="barcodeIndirimliFiyat" step="0.01" min="0"
-                                        oninput="syncDiscountInputs('discountedPrice')"
-                                        class="w-full px-4 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-green-50 text-green-700 font-black text-lg">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">İNDİRİMSİZ FİYAT <span class="text-xs text-gray-400">(Barkodda üzeri çizili)</span></label>
+                                    <input type="number" id="barcodeIndirimsizFiyat" step="0.01" min="0"
+                                        oninput="syncDiscountInputs('fullPrice')"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 bg-gray-50 text-gray-600 font-bold text-lg">
                                 </div>
                             </div>
                         </div>
@@ -2858,9 +2898,9 @@ async function handleNewProductBarcode(e) {
     const satisFiyati = parseFloat(document.getElementById('barcodeSatisFiyati').value);
     const indirim = parseFloat(document.getElementById('barcodeIndirim').value) || 0;
 
-    let indirimliFiyat = null;
-    if (indirim > 0) {
-        indirimliFiyat = satisFiyati - (satisFiyati * indirim / 100);
+    let indirimsizFiyat = null;
+    if (indirim > 0 && indirim < 100) {
+        indirimsizFiyat = satisFiyati / (1 - indirim / 100);
     }
 
     const bedenler = [];
@@ -2921,7 +2961,7 @@ async function handleNewProductBarcode(e) {
                                     bedenAraligi: bedenAraligi,
                                     renk: color,
                                     satisFiyati: satisFiyati,
-                                    indirimliFiyat: indirimliFiyat,
+                                    indirimsizFiyat: indirimsizFiyat,
                                     adet: countVal
                                 });
                             }
@@ -2949,7 +2989,7 @@ async function handleNewProductBarcode(e) {
                             kategori: kategori,
                             beden: size,
                             satisFiyati: satisFiyati,
-                            indirimliFiyat: indirimliFiyat,
+                            indirimsizFiyat: indirimsizFiyat,
                             adet: countVal
                         });
                     }
@@ -3032,9 +3072,9 @@ async function handleExistingProductBarcode(e) {
                 const key = b.renk ? `${b.beden}_${b.renk}` : b.beden;
                 const countVal = parseInt(document.getElementById(`existing_barcode_count_${key}`).value) || 0;
                 if (countVal > 0) {
-                    let indirimliFiyat = null;
-                    if (product.indirim && product.indirim > 0) {
-                        indirimliFiyat = product.satisFiyati - (product.satisFiyati * product.indirim / 100);
+                    let indirimsizFiyat = null;
+                    if (product.indirim && product.indirim > 0 && product.indirim < 100) {
+                        indirimsizFiyat = product.satisFiyati / (1 - product.indirim / 100);
                     }
 
                     printItems.push({
@@ -3045,7 +3085,7 @@ async function handleExistingProductBarcode(e) {
                         bedenAraligi: bedenAraligi,
                         renk: b.renk || '',
                         satisFiyati: product.satisFiyati,
-                        indirimliFiyat: indirimliFiyat,
+                        indirimsizFiyat: indirimsizFiyat,
                         adet: countVal
                     });
                 }
@@ -3053,9 +3093,9 @@ async function handleExistingProductBarcode(e) {
         } else {
             const countVal = parseInt(document.getElementById('existingBarcodeAdet').value) || 0;
             if (countVal > 0) {
-                let indirimliFiyat = null;
-                if (product.indirim && product.indirim > 0) {
-                    indirimliFiyat = product.satisFiyati - (product.satisFiyati * product.indirim / 100);
+                let indirimsizFiyat = null;
+                if (product.indirim && product.indirim > 0 && product.indirim < 100) {
+                    indirimsizFiyat = product.satisFiyati / (1 - product.indirim / 100);
                 }
 
                 printItems.push({
@@ -3064,7 +3104,7 @@ async function handleExistingProductBarcode(e) {
                     kategori: product.kategori || 'Kıyafet',
                     beden: product.beden || '',
                     satisFiyati: product.satisFiyati,
-                    indirimliFiyat: indirimliFiyat,
+                    indirimsizFiyat: indirimsizFiyat,
                     adet: countVal
                 });
             }
@@ -3174,9 +3214,9 @@ async function showBarcodePreview(items) {
                             <td colspan="2" style="border: 2px solid black; padding: 0;">
                                 <div style="display: flex; height: 100%;">
                                     <div style="width: 65%; display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 2px solid black;">
-                                        ${item.indirimliFiyat < item.satisFiyati && item.indirimliFiyat > 0 ? `
-                                            <div style="text-decoration: line-through; font-size: 9px; font-weight: bold; color: black; line-height: 1; margin-bottom: 0px; white-space: nowrap;">${price} ₺</div>
-                                            <div style="font-size: 13px; font-weight: 900; line-height: 1; white-space: nowrap;">${parseFloat(item.indirimliFiyat).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺</div>
+                                        ${item.indirimsizFiyat && item.indirimsizFiyat > item.satisFiyati ? `
+                                            <div style="text-decoration: line-through; font-size: 9px; font-weight: bold; color: black; line-height: 1; margin-bottom: 0px; white-space: nowrap;">${parseFloat(item.indirimsizFiyat).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺</div>
+                                            <div style="font-size: 13px; font-weight: 900; line-height: 1; white-space: nowrap;">${price} ₺</div>
                                         ` : `
                                             <div style="font-size: 13px; font-weight: 900; white-space: nowrap;">${price} ₺</div>
                                         `}
@@ -3435,4 +3475,87 @@ function addBarcodeCustomColor() {
 
     input.value = '';
     updateBarcodeStockInputs();
+}
+
+// ============ KAR YÜZDESİ OTOMATİK FİYAT SİSTEMİ ============
+
+// Kar Yüzdesine göre otomatik fiyat checkbox'ını toggle et
+function toggleAutoPrice(context) {
+    let checkboxId, karDivId, satisFiyatiId;
+
+    if (context === 'add') {
+        checkboxId = 'newAutoPrice';
+        karDivId = 'newKarYuzdesiDiv';
+        satisFiyatiId = 'newSatisFiyati';
+    } else if (context === 'edit') {
+        checkboxId = 'editAutoPrice';
+        karDivId = 'editKarYuzdesiDiv';
+        satisFiyatiId = 'editSatisFiyati';
+    } else if (context === 'barcode') {
+        checkboxId = 'barcodeAutoPrice';
+        karDivId = 'barcodeKarYuzdesiDiv';
+        satisFiyatiId = 'barcodeSatisFiyati';
+    }
+
+    const checkbox = document.getElementById(checkboxId);
+    const karDiv = document.getElementById(karDivId);
+    const satisFiyatiInput = document.getElementById(satisFiyatiId);
+
+    if (!checkbox || !karDiv || !satisFiyatiInput) return;
+
+    if (checkbox.checked) {
+        karDiv.classList.remove('hidden');
+        satisFiyatiInput.readOnly = true;
+        satisFiyatiInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+        satisFiyatiInput.title = 'Kar yüzdesi aktifken otomatik hesaplanır';
+        // Hemen hesapla
+        calculateAutoPrice(context);
+    } else {
+        karDiv.classList.add('hidden');
+        satisFiyatiInput.readOnly = false;
+        satisFiyatiInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        satisFiyatiInput.title = '';
+    }
+}
+
+// Kar yüzdesine göre satış fiyatını otomatik hesapla
+// Formül: Satış Fiyatı = Alış Fiyatı * (1 + Kar Yüzdesi / 100)
+function calculateAutoPrice(context) {
+    let checkboxId, alisFiyatiId, karYuzdesiId, satisFiyatiId;
+
+    if (context === 'add') {
+        checkboxId = 'newAutoPrice';
+        alisFiyatiId = 'newAlisFiyati';
+        karYuzdesiId = 'newKarYuzdesi';
+        satisFiyatiId = 'newSatisFiyati';
+    } else if (context === 'edit') {
+        checkboxId = 'editAutoPrice';
+        alisFiyatiId = 'editAlisFiyati';
+        karYuzdesiId = 'editKarYuzdesi';
+        satisFiyatiId = 'editSatisFiyati';
+    } else if (context === 'barcode') {
+        checkboxId = 'barcodeAutoPrice';
+        alisFiyatiId = 'barcodeAlisFiyati';
+        karYuzdesiId = 'barcodeKarYuzdesi';
+        satisFiyatiId = 'barcodeSatisFiyati';
+    }
+
+    const checkbox = document.getElementById(checkboxId);
+    if (!checkbox || !checkbox.checked) return;
+
+    const alisFiyati = parseFloat(document.getElementById(alisFiyatiId)?.value) || 0;
+    const karYuzdesi = parseFloat(document.getElementById(karYuzdesiId)?.value) || 0;
+    const satisFiyatiInput = document.getElementById(satisFiyatiId);
+
+    if (!satisFiyatiInput) return;
+
+    if (alisFiyati > 0 && karYuzdesi >= 0) {
+        const satisFiyati = alisFiyati * (1 + karYuzdesi / 100);
+        satisFiyatiInput.value = satisFiyati.toFixed(2);
+
+        // Barkod formundaysa sync de tetikle
+        if (context === 'barcode') {
+            syncDiscountInputs('price');
+        }
+    }
 }
