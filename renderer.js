@@ -958,8 +958,7 @@ function addProduct() {
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Kategori</label>
                             <select id="newKategori" onchange="toggleSizeSelection(this.value)" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
-                                <option value="">Seçiniz...</option>
-                                <option value="Kıyafet">Kıyafet</option>
+                                <option value="Kıyafet" selected>Kıyafet</option>
                                 <option value="Ev Tekstili">Ev Tekstili</option>
                             </select>
                         </div>
@@ -995,25 +994,25 @@ function addProduct() {
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Renk Seçimi (Zorunlu)</label>
                             <div id="colorSelectionDiv" class="space-y-2 mt-2">
-                                <div class="text-xs text-gray-500 mb-2">Genel Renkler:</div>
-                                <div class="flex flex-wrap gap-2">
+                                <div class="text-sm text-gray-500 mb-2">Genel Renkler:</div>
+                                <div class="flex flex-wrap gap-3">
                                     ${['Siyah', 'Beyaz', 'Kırmızı', 'Mavi', 'Yeşil', 'Sarı', 'Turuncu', 'Pembe', 'Mor', 'Lacivert', 'Bej', 'Gri', 'Kahverengi', 'Bordo', 'Turkuaz'].map(renk => `
-                                        <label class="inline-flex items-center p-1 px-2 bg-white border rounded hover:bg-indigo-50 cursor-pointer transition-colors text-xs">
-                                            <input type="checkbox" class="color-checkbox form-checkbox h-3 w-3 text-indigo-600" value="${renk}">
-                                            <span class="ml-1 text-xs text-gray-700">${renk}</span>
+                                        <label class="inline-flex items-center p-2 px-3 bg-white border rounded-lg hover:bg-indigo-50 cursor-pointer transition-colors text-sm shadow-sm">
+                                            <input type="checkbox" class="color-checkbox form-checkbox h-5 w-5 text-indigo-600" value="${renk}">
+                                            <span class="ml-2 text-sm text-gray-700 font-medium">${renk}</span>
                                         </label>
                                     `).join('')}
                                 </div>
-                                <div class="mt-2">
-                                    <label class="block text-xs text-gray-600 mb-1">Diğer Renk Ekle:</label>
+                                <div class="mt-3">
+                                    <label class="block text-sm text-gray-600 mb-1">Diğer Renk Ekle:</label>
                                     <div class="flex gap-2">
-                                        <input type="text" id="customColorInput" placeholder="Renk adı girin..." class="flex-1 px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none">
-                                        <button type="button" onclick="addCustomColor()" class="px-3 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition">
+                                        <input type="text" id="customColorInput" placeholder="Renk adı girin..." class="flex-1 px-3 py-2 text-sm border rounded-lg focus:border-indigo-500 outline-none">
+                                        <button type="button" onclick="addCustomColor()" class="px-4 py-2 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition">
                                             <i class="fas fa-plus"></i> Ekle
                                         </button>
                                     </div>
                                 </div>
-                                <div id="selectedColorsContainer" class="flex flex-wrap gap-1 mt-2"></div>
+                                <div id="selectedColorsContainer" class="flex flex-wrap gap-2 mt-3"></div>
                             </div>
                         </div>
                         <div>
@@ -1068,6 +1067,7 @@ function addProduct() {
     // Setup Enter key navigation for the newly displayed form
     setTimeout(() => {
         updateBarcodeUI(); // Set initial visibility
+        toggleSizeSelection('Kıyafet'); // Kategori varsayılan olarak Kıyafet seçili
         setupEnterKeyNavigation('addProductForm');
         document.dispatchEvent(new Event('addProductPageShown'));
     }, 100);
@@ -1761,8 +1761,7 @@ async function editProduct(id) {
                         <div class="space-y-2">
                             <label class="block text-gray-700 text-sm font-bold">Kategori</label>
                             <select id="editKategori" onchange="toggleEditSizeSelection(this.value)" class="w-full px-3 py-2 border rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
-                                <option value="">Seçiniz...</option>
-                                <option value="Kıyafet" ${product.kategori === 'Kıyafet' ? 'selected' : ''}>Kıyafet</option>
+                                <option value="Kıyafet" ${product.kategori !== 'Ev Tekstili' ? 'selected' : ''}>Kıyafet</option>
                                 <option value="Ev Tekstili" ${product.kategori === 'Ev Tekstili' ? 'selected' : ''}>Ev Tekstili</option>
                             </select>
                         </div>
@@ -1775,28 +1774,28 @@ async function editProduct(id) {
                                     Renk Seçimi Aktif
                                 </label>
                                 <div id="editColorSelectionDiv" class="${product.bedenler && product.bedenler.some(b => b.renk) ? '' : 'hidden'} space-y-2 mt-2">
-                                    <div class="text-xs text-gray-500 mb-2">Genel Renkler:</div>
-                                    <div class="flex flex-wrap gap-2">
+                                    <div class="text-sm text-gray-500 mb-2">Genel Renkler:</div>
+                                    <div class="flex flex-wrap gap-3">
                                         ${['Siyah', 'Beyaz', 'Kırmızı', 'Mavi', 'Yeşil', 'Sarı', 'Turuncu', 'Pembe', 'Mor', 'Lacivert', 'Bej', 'Gri', 'Kahverengi', 'Bordo', 'Turkuaz'].map(renk => {
             const isChecked = product.bedenler && product.bedenler.some(b => b.renk === renk);
             return `
-                                                <label class="inline-flex items-center p-1 px-2 bg-white border rounded hover:bg-indigo-50 cursor-pointer transition-colors text-xs">
-                                                    <input type="checkbox" class="edit-color-checkbox form-checkbox h-3 w-3 text-indigo-600" value="${renk}" ${isChecked ? 'checked' : ''} onchange="updateEditStockInputs()">
-                                                    <span class="ml-1 text-xs text-gray-700">${renk}</span>
+                                                <label class="inline-flex items-center p-2 px-3 bg-white border rounded-lg hover:bg-indigo-50 cursor-pointer transition-colors text-sm shadow-sm">
+                                                    <input type="checkbox" class="edit-color-checkbox form-checkbox h-5 w-5 text-indigo-600" value="${renk}" ${isChecked ? 'checked' : ''} onchange="updateEditStockInputs()">
+                                                    <span class="ml-2 text-sm text-gray-700 font-medium">${renk}</span>
                                                 </label>
                                             `;
         }).join('')}
                                     </div>
-                                    <div class="mt-2">
-                                        <label class="block text-xs text-gray-600 mb-1">Diğer Renk Ekle:</label>
+                                    <div class="mt-3">
+                                        <label class="block text-sm text-gray-600 mb-1">Diğer Renk Ekle:</label>
                                         <div class="flex gap-2">
-                                            <input type="text" id="editCustomColorInput" placeholder="Renk adı girin..." class="flex-1 px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none">
-                                            <button type="button" onclick="addEditCustomColor()" class="px-3 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition">
+                                            <input type="text" id="editCustomColorInput" placeholder="Renk adı girin..." class="flex-1 px-3 py-2 text-sm border rounded-lg focus:border-indigo-500 outline-none">
+                                            <button type="button" onclick="addEditCustomColor()" class="px-4 py-2 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition">
                                                 <i class="fas fa-plus"></i> Ekle
                                             </button>
                                         </div>
                                     </div>
-                                    <div id="editSelectedColorsContainer" class="flex flex-wrap gap-1 mt-2"></div>
+                                    <div id="editSelectedColorsContainer" class="flex flex-wrap gap-2 mt-3"></div>
                                 </div>
                             </div>
 
@@ -2665,8 +2664,7 @@ async function selectBarcodeMode(mode) {
                             <label class="block text-sm font-medium text-gray-700 mb-2">Kategori *</label>
                             <select id="barcodeKategori" required onchange="toggleBarcodeSizeSelection(this.value)"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="">Seçiniz...</option>
-                                <option value="Kıyafet">Kıyafet</option>
+                                <option value="Kıyafet" selected>Kıyafet</option>
                                 <option value="Ev Tekstili">Ev Tekstili</option>
                             </select>
                         </div>
@@ -2719,25 +2717,25 @@ async function selectBarcodeMode(mode) {
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Renk Seçimi (Zorunlu)</label>
                             <div id="barcodeColorSelectionDiv" class="space-y-2 mt-2">
-                                <div class="text-xs text-gray-500 mb-2">Genel Renkler:</div>
-                                <div class="flex flex-wrap gap-2">
+                                <div class="text-sm text-gray-500 mb-2">Genel Renkler:</div>
+                                <div class="flex flex-wrap gap-3">
                                     ${['Siyah', 'Beyaz', 'Kırmızı', 'Mavi', 'Yeşil', 'Sarı', 'Turuncu', 'Pembe', 'Mor', 'Lacivert', 'Bej', 'Gri', 'Kahverengi', 'Bordo', 'Turkuaz'].map(renk => `
-                                        <label class="inline-flex items-center p-1 px-2 bg-white border rounded hover:bg-indigo-50 cursor-pointer transition-colors text-xs">
-                                            <input type="checkbox" class="barcode-color-checkbox form-checkbox h-3 w-3 text-indigo-600" value="${renk}" onchange="updateBarcodeStockInputs()">
-                                            <span class="ml-1 text-xs text-gray-700">${renk}</span>
+                                        <label class="inline-flex items-center p-2 px-3 bg-white border rounded-lg hover:bg-indigo-50 cursor-pointer transition-colors text-sm shadow-sm">
+                                            <input type="checkbox" class="barcode-color-checkbox form-checkbox h-5 w-5 text-indigo-600" value="${renk}" onchange="updateBarcodeStockInputs()">
+                                            <span class="ml-2 text-sm text-gray-700 font-medium">${renk}</span>
                                         </label>
                                     `).join('')}
                                 </div>
-                                <div class="mt-2">
-                                    <label class="block text-xs text-gray-600 mb-1">Diğer Renk Ekle:</label>
+                                <div class="mt-3">
+                                    <label class="block text-sm text-gray-600 mb-1">Diğer Renk Ekle:</label>
                                     <div class="flex gap-2">
-                                        <input type="text" id="barcodeCustomColorInput" placeholder="Renk adı girin..." class="flex-1 px-2 py-1 text-xs border rounded focus:border-indigo-500 outline-none">
-                                        <button type="button" onclick="addBarcodeCustomColor()" class="px-3 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition">
+                                        <input type="text" id="barcodeCustomColorInput" placeholder="Renk adı girin..." class="flex-1 px-3 py-2 text-sm border rounded-lg focus:border-indigo-500 outline-none">
+                                        <button type="button" onclick="addBarcodeCustomColor()" class="px-4 py-2 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition">
                                             <i class="fas fa-plus"></i> Ekle
                                         </button>
                                     </div>
                                 </div>
-                                <div id="barcodeSelectedColorsContainer" class="flex flex-wrap gap-1 mt-2"></div>
+                                <div id="barcodeSelectedColorsContainer" class="flex flex-wrap gap-2 mt-3"></div>
                             </div>
                         </div>
                         <div>
@@ -2799,6 +2797,7 @@ async function selectBarcodeMode(mode) {
         `;
 
         document.getElementById('newProductBarcodeForm').addEventListener('submit', handleNewProductBarcode);
+        toggleBarcodeSizeSelection('Kıyafet'); // Kategori varsayılan olarak Kıyafet seçili
 
     } else if (mode === 'existing') {
         const products = await window.electronAPI.getProducts();
