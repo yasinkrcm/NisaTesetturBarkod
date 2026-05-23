@@ -1,0 +1,11 @@
+{
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "github"
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)"
+    ]
+  }
+}

@@ -26,10 +26,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeKeyboardShortcuts();
 });
 
-// Logout function converted to Reload/Exit
+// Logout function converted to Exit App
 function logout() {
-    // Reload the application to reset state (effectively simplified logout/restart)
-    window.location.reload();
+    window.electronAPI.quitApp();
 }
 
 let currentUser = null;
@@ -93,6 +92,7 @@ function setupFormEventListeners() {
                 }
 
                 const checkedSizes = document.querySelectorAll('.size-checkbox:checked');
+    const customSizes = document.querySelectorAll('.selected-size-input');
 
                 // Her beden+renk kombinasyonu için ayrı kayıt
                 checkedSizes.forEach(checkbox => {
@@ -648,6 +648,7 @@ function showLoginPage() {
 async function showProducts() {
     try {
         const products = await window.electronAPI.getProducts();
+    products.reverse();
 
         // Hide main page sections
         document.getElementById('barcodeSection').style.display = 'none';
@@ -681,18 +682,18 @@ async function showProducts() {
                             class="w-full pl-10 pr-4 py-3 border-2 border-indigo-100 focus:border-indigo-400 rounded-lg focus:outline-none transition-colors">
                     </div>
                     
-                    <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <div class="rounded-lg border border-gray-200 overflow-hidden">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barkod</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürün Adı</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Beden</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alış Fiyatı</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış Fiyatı</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barkod</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürün Adı</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Beden</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alış Fiyatı</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış Fiyatı</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
                                 </tr>
                             </thead>
                             <tbody id="productTableBody" class="bg-white divide-y divide-gray-200">
@@ -749,7 +750,7 @@ async function showProducts() {
                                             </div>
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <td class="px-3 py-2 text-right text-xs font-medium">
                                             <div class="flex justify-end space-x-2">
                                                 <button onclick="editProduct(${p.id})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex">
                                                     <i class="fas fa-edit"></i>
@@ -812,6 +813,7 @@ function setupProductSearch() {
 async function showSales() {
     try {
         const sales = await window.electronAPI.getSales(currentUser.id);
+    sales.reverse();
 
         // Hide main page sections
         document.getElementById('barcodeSection').style.display = 'none';
@@ -846,14 +848,14 @@ async function showSales() {
                             <p class="text-gray-500">İlk satışınızı yapmak için ana menüye dönün ve ürün taramaya başlayın.</p>
                         </div>
                     ` : `
-                        <div class="overflow-x-auto rounded-lg border border-gray-200">
+                        <div class="rounded-lg border border-gray-200 overflow-hidden">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış No</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürünler</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam Tutar</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış No</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürünler</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam Tutar</th>
                                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
                                     </tr>
                                 </thead>
@@ -1026,10 +1028,20 @@ function addProduct() {
                                 `).join('')}
                             </div>
                         </div>
+                            <div class="mt-3">
+                                <label class="block text-sm text-gray-600 mb-1">Diğer Beden Ekle:</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="customSizeInput" placeholder="Beden girin..." class="flex-1 px-3 py-2 text-sm border rounded-lg focus:border-indigo-500 outline-none">
+                                    <button type="button" onclick="addCustomSize()" class="px-4 py-2 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div id="selectedSizesContainer" class="flex flex-wrap gap-2 mt-2"></div>
+                            </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Beden Seçimi (Standart)</label>
                             <div class="flex flex-wrap gap-2">
-                                ${[1, 2, 3, 4, 5, 6].map(size => `
+                                ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(size => `
                                     <label class="inline-flex items-center p-2 bg-white border rounded hover:bg-indigo-50 cursor-pointer transition-colors">
                                         <input type="checkbox" class="size-checkbox form-checkbox h-4 w-4 text-indigo-600" value="${size}" onchange="updateStockInputs()">
                                         <span class="ml-2 text-sm text-gray-700">${size}</span>
@@ -1106,6 +1118,46 @@ function toggleColorSelection() {
 }
 
 // Helper to add custom color
+
+function addCustomSize() {
+    const input = document.getElementById('customSizeInput');
+    const sizeName = input.value.trim();
+    if (!sizeName) return;
+    const container = document.getElementById('selectedSizesContainer');
+    const sizeTag = document.createElement('span');
+    sizeTag.className = 'inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs border';
+    sizeTag.innerHTML = `${sizeName} <button type="button" onclick="this.parentElement.remove(); updateStockInputs();" class="ml-1 text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button><input type="hidden" class="selected-size-input" value="${sizeName}">`;
+    container.appendChild(sizeTag);
+    input.value = '';
+    updateStockInputs();
+}
+
+function addEditCustomSize() {
+    const input = document.getElementById('editCustomSizeInput');
+    const sizeName = input.value.trim();
+    if (!sizeName) return;
+    const container = document.getElementById('editSelectedSizesContainer');
+    const sizeTag = document.createElement('span');
+    sizeTag.className = 'inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs border';
+    sizeTag.innerHTML = `${sizeName} <button type="button" onclick="this.parentElement.remove(); updateEditStockInputs();" class="ml-1 text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button><input type="hidden" class="edit-selected-size-input" value="${sizeName}">`;
+    container.appendChild(sizeTag);
+    input.value = '';
+    updateEditStockInputs();
+}
+
+function addBarcodeCustomSize() {
+    const input = document.getElementById('barcodeCustomSizeInput');
+    const sizeName = input.value.trim();
+    if (!sizeName) return;
+    const container = document.getElementById('barcodeSelectedSizesContainer');
+    const sizeTag = document.createElement('span');
+    sizeTag.className = 'inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs border';
+    sizeTag.innerHTML = `${sizeName} <button type="button" onclick="this.parentElement.remove(); updateBarcodeStockInputs();" class="ml-1 text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button><input type="hidden" class="barcode-selected-size-input" value="${sizeName}">`;
+    container.appendChild(sizeTag);
+    input.value = '';
+    updateBarcodeStockInputs();
+}
+
 function addCustomColor() {
     const input = document.getElementById('customColorInput');
     const colorName = input.value.trim();
@@ -1165,6 +1217,7 @@ function updateBarcodeUI() {
 function updateStockInputs() {
     const container = document.getElementById('stockInputContainer');
     const checkedSizes = document.querySelectorAll('.size-checkbox:checked');
+    const customSizes = document.querySelectorAll('.selected-size-input');
     const autoGen = document.getElementById('autoGenerateBarcode').checked;
     const enableColors = true; // Renk seçimi her zaman aktif
     const currentValues = {};
@@ -1181,14 +1234,16 @@ function updateStockInputs() {
     document.querySelectorAll('.color-checkbox:checked').forEach(cb => selectedColors.push(cb.value));
     document.querySelectorAll('.selected-color-input').forEach(input => selectedColors.push(input.value));
 
-    checkedSizes.forEach(checkbox => {
-        const size = checkbox.value;
+    const sizesToProcess = [];
+    checkedSizes.forEach(cb => sizesToProcess.push(cb.value));
+    customSizes.forEach(input => sizesToProcess.push(input.value));
+    [...new Set(sizesToProcess)].forEach(size => {
 
         // Eğer renk seçimi aktifse, her beden+renk için ayrı kart oluştur
         if (enableColors && selectedColors.length > 0) {
             selectedColors.forEach(color => {
                 const key = `${size}_${color}`;
-                const stockVal = currentValues[`stock_${key}`] || '';
+                const stockVal = currentValues[`stock_${key}`] || '1';
                 const barcodeVal = currentValues[`barcode_val_${key}`] || generateBarcodeNumber();
 
                 const div = document.createElement('div');
@@ -1227,7 +1282,7 @@ function updateStockInputs() {
             });
         } else {
             // Renk seçimi yoksa, sadece beden
-            const stockVal = currentValues[`stock_${size}`] || '';
+            const stockVal = currentValues[`stock_${size}`] || '1';
             const barcodeVal = currentValues[`barcode_val_${size}`] || generateBarcodeNumber();
 
             const div = document.createElement('div');
@@ -1331,6 +1386,7 @@ function showSizeDetails(bedenler, urunAdi) {
 async function getDailyReport() {
     try {
         const report = await window.electronAPI.getDailyReport();
+        if (report.satilanUrunler) report.satilanUrunler.reverse();
 
         // Hide main page sections
         document.getElementById('barcodeSection').style.display = 'none';
@@ -1801,7 +1857,7 @@ async function editProduct(id) {
 
                             <label class="block text-gray-700 text-sm font-bold mb-2">Bedenler</label>
                             <div class="grid grid-cols-5 gap-2 bg-gray-50 p-3 rounded-lg border">
-                                ${['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '1', '2', '3', '4', '5', '6'].map(size => {
+                                ${['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map(size => {
             const isChecked = product.bedenler && product.bedenler.some(b => b.beden === size);
             return `
                                         <label class="flex items-center space-x-1 text-xs cursor-pointer hover:text-indigo-600">
@@ -1879,6 +1935,7 @@ async function editProduct(id) {
 
                     if (kategori === 'Kıyafet') {
                         const checkedSizes = document.querySelectorAll('.edit-size-checkbox:checked');
+    const customSizes = document.querySelectorAll('.edit-selected-size-input');
                         const enableColors = document.getElementById('editEnableColorSelection').checked;
                         const selectedColors = [];
 
@@ -1981,6 +2038,7 @@ function toggleEditSizeSelection(category) {
 function updateEditStockInputs(initialBedenler = null) {
     const container = document.getElementById('editStockInputContainer');
     const checkedSizes = document.querySelectorAll('.edit-size-checkbox:checked');
+    const customSizes = document.querySelectorAll('.edit-selected-size-input');
     const enableColors = document.getElementById('editEnableColorSelection')?.checked || false;
     const currentValues = {};
 
@@ -2005,14 +2063,16 @@ function updateEditStockInputs(initialBedenler = null) {
     document.querySelectorAll('.edit-color-checkbox:checked').forEach(cb => selectedColors.push(cb.value));
     document.querySelectorAll('.edit-selected-color-input').forEach(input => selectedColors.push(input.value));
 
-    checkedSizes.forEach(checkbox => {
-        const size = checkbox.value;
+    const sizesToProcess = [];
+    checkedSizes.forEach(cb => sizesToProcess.push(cb.value));
+    customSizes.forEach(input => sizesToProcess.push(input.value));
+    [...new Set(sizesToProcess)].forEach(size => {
 
         // Eğer renk seçimi aktifse, her beden+renk için ayrı kart oluştur
         if (enableColors && selectedColors.length > 0) {
             selectedColors.forEach(color => {
                 const key = `${size}_${color}`;
-                const stockVal = currentValues[`edit_stock_${key}`] || '';
+                const stockVal = currentValues[`edit_stock_${key}`] || '1';
                 const barcodeVal = currentValues[`edit_barcode_val_${key}`] || generateBarcodeNumber();
 
                 const div = document.createElement('div');
@@ -2034,7 +2094,7 @@ function updateEditStockInputs(initialBedenler = null) {
             });
         } else {
             // Renk seçimi yoksa, sadece beden
-            const stockVal = currentValues[`edit_stock_${size}`] || '';
+            const stockVal = currentValues[`edit_stock_${size}`] || '1';
             const barcodeVal = currentValues[`edit_barcode_val_${size}`] || generateBarcodeNumber();
 
             const div = document.createElement('div');
@@ -2749,10 +2809,20 @@ async function selectBarcodeMode(mode) {
                                 `).join('')}
                             </div>
                         </div>
+                            <div class="mt-3">
+                                <label class="block text-sm text-gray-600 mb-1">Diğer Beden Ekle:</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="barcodeCustomSizeInput" placeholder="Beden girin..." class="flex-1 px-3 py-2 text-sm border rounded-lg focus:border-indigo-500 outline-none">
+                                    <button type="button" onclick="addBarcodeCustomSize()" class="px-4 py-2 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div id="barcodeSelectedSizesContainer" class="flex flex-wrap gap-2 mt-2"></div>
+                            </div>
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Beden Seçimi (Standart)</label>
                             <div class="flex flex-wrap gap-2">
-                                ${[1, 2, 3, 4, 5, 6].map(size => `
+                                ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(size => `
                                     <label class="inline-flex items-center p-2 bg-gray-50 border rounded hover:bg-indigo-50 cursor-pointer transition-colors">
                                         <input type="checkbox" class="barcode-size-checkbox form-checkbox h-4 w-4 text-indigo-600" value="${size}" onchange="updateBarcodeStockInputs()">
                                         <span class="ml-2 text-sm text-gray-700">${size}</span>
@@ -2801,6 +2871,7 @@ async function selectBarcodeMode(mode) {
 
     } else if (mode === 'existing') {
         const products = await window.electronAPI.getProducts();
+    products.reverse();
 
         formArea.innerHTML = `
             <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
@@ -2909,6 +2980,7 @@ async function handleNewProductBarcode(e) {
 
     if (kategori === 'Kıyafet') {
         const checkedSizes = document.querySelectorAll('.barcode-size-checkbox:checked');
+    const customSizes = document.querySelectorAll('.barcode-selected-size-input');
         const enableColors = true; // Renk seçimi her zaman aktif
         const selectedColors = [];
 
@@ -2916,8 +2988,10 @@ async function handleNewProductBarcode(e) {
         document.querySelectorAll('.barcode-color-checkbox:checked').forEach(cb => selectedColors.push(cb.value));
         document.querySelectorAll('.barcode-selected-color-input').forEach(input => selectedColors.push(input.value));
 
-        checkedSizes.forEach(checkbox => {
-            const size = checkbox.value;
+        const sizesToProcess = [];
+        checkedSizes.forEach(cb => sizesToProcess.push(cb.value));
+        customSizes.forEach(input => sizesToProcess.push(input.value));
+        [...new Set(sizesToProcess)].forEach(size => {
 
             if (enableColors && selectedColors.length > 0) {
                 // Her beden+renk kombinasyonu için
@@ -3052,6 +3126,7 @@ async function handleExistingProductBarcode(e) {
 
     try {
         const products = await window.electronAPI.getProducts();
+    products.reverse();
         const product = products.find(p => p.id === productId);
 
         if (!product) {
@@ -3346,6 +3421,7 @@ function toggleBarcodeSizeSelection(category) {
 function updateBarcodeStockInputs() {
     const container = document.getElementById('barcodeStockInputContainer');
     const checkedSizes = document.querySelectorAll('.barcode-size-checkbox:checked');
+    const customSizes = document.querySelectorAll('.barcode-selected-size-input');
     const enableColors = true; // Renk seçimi her zaman aktif
     const currentValues = {};
 
@@ -3361,14 +3437,16 @@ function updateBarcodeStockInputs() {
     document.querySelectorAll('.barcode-color-checkbox:checked').forEach(cb => selectedColors.push(cb.value));
     document.querySelectorAll('.barcode-selected-color-input').forEach(input => selectedColors.push(input.value));
 
-    checkedSizes.forEach(checkbox => {
-        const size = checkbox.value;
+    const sizesToProcess = [];
+    checkedSizes.forEach(cb => sizesToProcess.push(cb.value));
+    customSizes.forEach(input => sizesToProcess.push(input.value));
+    [...new Set(sizesToProcess)].forEach(size => {
 
         // Eğer renk seçimi aktifse, her beden+renk için ayrı kart oluştur
         if (enableColors && selectedColors.length > 0) {
             selectedColors.forEach(color => {
                 const key = `${size}_${color}`;
-                const stockVal = currentValues[`barcode_stock_${key}`] || '';
+                const stockVal = currentValues[`barcode_stock_${key}`] || '1';
                 const countVal = currentValues[`barcode_count_${key}`] || '1';
                 const barcodeVal = currentValues[`barcode_val_${key}`] || generateBarcodeNumber();
 
@@ -3402,7 +3480,7 @@ function updateBarcodeStockInputs() {
             });
         } else {
             // Renk seçimi yoksa, sadece beden
-            const stockVal = currentValues[`barcode_stock_${size}`] || '';
+            const stockVal = currentValues[`barcode_stock_${size}`] || '1';
             const countVal = currentValues[`barcode_count_${size}`] || '1';
             const barcodeVal = currentValues[`barcode_val_${size}`] || generateBarcodeNumber();
 

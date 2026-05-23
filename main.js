@@ -32,6 +32,21 @@ const adapter = new FileSync('database.json');
 const db = low(adapter);
 
 // ============================================================
+// BULUT YEDEKLEME SİSTEMİ (MongoDB)
+// ============================================================
+const { triggerCloudBackup, syncOnStartup } = require('./cloudSync');
+
+// Başlangıçta internet varken çevrimdışı değişiklikleri aktar
+syncOnStartup(db);
+
+const originalWrite = db.write.bind(db);
+db.write = function() {
+    const result = originalWrite();
+    triggerCloudBackup(db);
+    return result;
+};
+
+// ============================================================
 // GÜNLÜK YEDEKLEME SİSTEMİ
 // ============================================================
 
@@ -245,6 +260,10 @@ app.on('activate', () => {
 });
 
 // IPC Handlers
+ipcMain.handle('quitApp', () => {
+    app.quit();
+});
+
 ipcMain.handle('login', (event, data) => {
     const user = db.get('kullanicilar')
         .find({ kullaniciAdi: data.username, sifre: data.password })

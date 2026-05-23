@@ -9,11 +9,16 @@ dist/
 .vscode
 
 *.db
-*.json
+database*.json
+package-lock.json
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Extra ignores
+backups/
+scratch/
 
 # Optional: Windows ve macOS sistem dosyaları
 Thumbs.db
