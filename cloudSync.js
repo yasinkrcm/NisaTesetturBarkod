@@ -1,7 +1,8 @@
+require('dotenv').config();
 const { MongoClient } = require('mongodb');
 
-// Bağlantı adresi (Kullanıcının verdiği)
-const uri = "mongodb+srv://yasinkaracam67_db_user:RoscDqpyfQoxDXOZ@cluster0.tiglra7.mongodb.net/?appName=Cluster0";
+// Bağlantı adresi (Güvenlik için .env dosyasından çekiyoruz)
+const uri = process.env.MONGODB_URI;
 
 // Bağlantı ayarları: Sadece internet varsa anında hata verip kapatsın diye timeoutlar düşük tutuldu.
 // İnternet yokken veya yavaşken ana uygulamayı kilitlemesini engelliyoruz.
