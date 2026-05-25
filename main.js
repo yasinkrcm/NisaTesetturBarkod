@@ -785,7 +785,18 @@ async function printToDevice(printWindow, deviceName) {
     let printer = null;
     try {
         const printers = await printWindow.webContents.getPrintersAsync();
-        printer = printers.find(p => p.name.includes(deviceName));
+        // Try finding exact or partial match case-insensitively
+        printer = printers.find(p => p.name.toLowerCase().includes(deviceName.toLowerCase()));
+        
+        // Special fallback: If searching for Aclas, look for any printer containing "aclas"
+        if (!printer && deviceName.toLowerCase().includes("aclas")) {
+            printer = printers.find(p => p.name.toLowerCase().includes("aclas"));
+        }
+        
+        // Special fallback: If searching for Argox, look for any printer containing "argox"
+        if (!printer && deviceName.toLowerCase().includes("argox")) {
+            printer = printers.find(p => p.name.toLowerCase().includes("argox"));
+        }
     } catch (e) {
         console.error("Error getting printers:", e);
     }

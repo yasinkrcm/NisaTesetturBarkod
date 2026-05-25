@@ -32,7 +32,23 @@ function logout() {
 }
 
 let currentUser = null;
+let cachedPrinters = []; // Yazıcı ön belleği - modal açılışında kasma önlemek için
 let cart = [];
+
+// Get printers (uses cached list if available to avoid UI lag/freezing)
+async function getPrintersCached() {
+    if (cachedPrinters && cachedPrinters.length > 0) {
+        return cachedPrinters;
+    }
+    try {
+        const printers = await window.electronAPI.getPrinters();
+        cachedPrinters = printers;
+        return printers;
+    } catch (err) {
+        console.error('Error fetching printers:', err);
+        return [];
+    }
+}
 
 // Login function
 // Login function removed as it is no longer used
@@ -453,7 +469,7 @@ async function initializeMainApp() {
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Dynamic Content Area -->
                     <div id="dynamicContent" class="min-h-96">
                         <!-- Content will be loaded here -->
@@ -495,7 +511,7 @@ async function initializeMainApp() {
                     </div>
                 </div>
             </div>
-            
+
             <!-- Footer -->
             <footer class="bg-gray-900 text-white py-4 text-center text-sm">
                 <div class="container mx-auto">
@@ -535,6 +551,9 @@ async function initializeApp(user) {
     currentUser = user;
     if (document.getElementById('loginForm')) document.getElementById('loginForm').classList.add('hidden');
     if (document.getElementById('mainApp')) document.getElementById('mainApp').classList.remove('hidden');
+
+    // Yazıcıları başlangıçta arka planda bir kez önbelleğe al
+    getPrintersCached().catch(() => {});
 
     await loadStatistics();
     await initializeMainApp();
@@ -736,7 +755,7 @@ async function showProducts() {
                                             <span class="text-xs text-gray-500">${(p.alisFiyati || 0).toFixed(2)}₺</span>
                                         </td>
                                         <td class="px-2 py-1 whitespace-nowrap">
-                                            <div class="text-xs font-medium text-indigo-600">${(p.satisFiyati || 0).toFixed(2)}₺${p.indirim > 0 ? `<span class="ml-1 text-red-500">%${p.indirim}</span>` : ''}</div>
+                                            <div class="text-sm font-bold text-indigo-700">${(p.satisFiyati || 0).toFixed(2)}₺${p.indirim > 0 ? `<span class="ml-1 text-xs text-red-500">%${p.indirim}</span>` : ''}</div>
                                         </td>
                                         <td class="px-2 py-1 whitespace-nowrap">
                                             ${(p.stokMiktari || 0) > 10
@@ -1677,6 +1696,28 @@ function completeSale() {
     const modal = document.getElementById('paymentModal');
     modal.classList.remove('hidden');
 
+    // Yazıcıları yükle - varsayılan Aclas ile başlayan
+    const savedSalePrinter = localStorage.getItem('defaultSalePrinter') || '';
+    getPrintersCached().then(printers => {
+        const select = document.getElementById('saleReceiptPrinter');
+        // Mevcut seçenekleri temizle (manuel haç kalabilir)
+        select.innerHTML = '<option value="manuel">Manuel Seçim (Diyalog)</option>';
+        printers.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.name;
+            option.textContent = p.name;
+            select.appendChild(option);
+        });
+        // Aclas ile başlayan yazıcıyı bul, yoksa kaydedileni, yoksa ilkini kullan
+        const aclasPrinter = printers.find(p => p.name.toLowerCase().startsWith('aclas'));
+        const targetPrinter = savedSalePrinter && printers.find(p => p.name === savedSalePrinter)
+            ? savedSalePrinter
+            : (aclasPrinter ? aclasPrinter.name : (printers[0] ? printers[0].name : 'manuel'));
+        select.value = targetPrinter;
+        // Değişiklikte kaydet
+        select.onchange = (e) => localStorage.setItem('defaultSalePrinter', e.target.value);
+    }).catch(() => {});
+
     // Auto focus input
     setTimeout(() => {
         document.getElementById('receivedAmount').focus();
@@ -1747,12 +1788,15 @@ async function confirmPaymentAndPrint() {
 
             // Print receipt with payment details
             try {
+                const printerSelect = document.getElementById('saleReceiptPrinter');
+                const selectedPrinter = printerSelect ? printerSelect.value : 'manuel';
                 await window.electronAPI.printSaleReceipt({
                     saleId: saleId,
                     items: cart,
                     totalAmount: totalAmount,
                     receivedAmount: receivedAmount,
-                    changeAmount: changeAmount
+                    changeAmount: changeAmount,
+                    printerName: selectedPrinter
                 });
                 showNotification('Fiş yazdırılıyor...', 'info');
             } catch (printError) {
@@ -3363,17 +3407,23 @@ async function showBarcodePreview(items) {
         });
 
         // Load printers and select previously saved one
-        window.electronAPI.getPrinters().then(printers => {
+        getPrintersCached().then(printers => {
             const select = document.getElementById('printerSelect');
-            const savedPrinter = localStorage.getItem('defaultBarcodePrinter') || 'manuel';
+            const savedPrinter = localStorage.getItem('defaultBarcodePrinter') || '';
             
             printers.forEach(p => {
                 const option = document.createElement('option');
                 option.value = p.name;
                 option.textContent = p.name;
-                if (p.name === savedPrinter) option.selected = true;
                 select.appendChild(option);
             });
+
+            // Argox ile başlayan yazıcıyı varsayılan yap
+            const argoxPrinter = printers.find(p => p.name.toLowerCase().includes('argox'));
+            const targetPrinter = savedPrinter && printers.find(p => p.name === savedPrinter)
+                ? savedPrinter
+                : (argoxPrinter ? argoxPrinter.name : (printers[0] ? printers[0].name : 'manuel'));
+            select.value = targetPrinter;
 
             // Save on change
             select.addEventListener('change', (e) => {
