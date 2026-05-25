@@ -117,8 +117,13 @@ function setupFormEventListeners() {
             }
 
             if (bedenler.length === 0) {
-                showNotification('En az bir beden ve miktar seçmelisiniz!', 'error');
-                return;
+                // Kıyafet kategorisinde beden zorunlu, Ev Tekstili'nde değil
+                if (kategori === 'Kıyafet') {
+                    showNotification('En az bir beden ve miktar seçmelisiniz!', 'error');
+                    return;
+                }
+                // Ev Tekstili için stok miktarını direkt oku
+                totalStok = parseInt(document.getElementById('newStokMiktari').value) || 0;
             } else {
                 totalStok = parseInt(document.getElementById('newStokMiktari').value) || 0;
             }
@@ -682,84 +687,74 @@ async function showProducts() {
                             class="w-full pl-10 pr-4 py-3 border-2 border-indigo-100 focus:border-indigo-400 rounded-lg focus:outline-none transition-colors">
                     </div>
                     
-                    <div class="rounded-lg border border-gray-200 overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
+                    <div class="rounded-lg border border-gray-200 overflow-hidden w-full">
+                        <table class="w-full table-fixed divide-y divide-gray-200 text-xs">
+                            <colgroup>
+                                <col style="width:14%">
+                                <col style="width:18%">
+                                <col style="width:9%">
+                                <col style="width:16%">
+                                <col style="width:10%">
+                                <col style="width:11%">
+                                <col style="width:9%">
+                                <col style="width:13%">
+                            </colgroup>
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barkod</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürün Adı</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Beden</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alış Fiyatı</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış Fiyatı</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
-                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Barkod</th>
+                                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ürün Adı</th>
+                                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
+                                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Beden/Renk</th>
+                                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Alış</th>
+                                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Satış</th>
+                                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stok</th>
+                                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">İşlemler</th>
                                 </tr>
                             </thead>
                             <tbody id="productTableBody" class="bg-white divide-y divide-gray-200">
                                 ${products.map(p => `
                                     <tr class="hover:bg-gray-50 transition-colors" data-search="${p.urunAdi} ${p.barkod} ${p.bedenler ? p.bedenler.map(b => `${b.barkod} ${b.beden} ${b.renk || ''}`).join(' ') : ''}" data-id="${p.id}">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="flex items-center">
-                                                <i class="fas fa-barcode text-gray-400 mr-2"></i>
-                                                <span class="font-medium text-gray-900">${p.barkod || (p.bedenler && p.bedenler[0] ? p.bedenler[0].barkod : '-')}</span>
-                                            </div>
+                                        <td class="px-2 py-1 overflow-hidden">
+                                            <span class="font-medium text-gray-900 text-xs block truncate">${p.barkod || (p.bedenler && p.bedenler[0] ? p.bedenler[0].barkod : '-')}</span>
                                         </td>
-                                        <td class="px-6 py-4">
-                                            <div class="text-sm font-medium text-gray-900">${p.urunAdi}</div>
+                                        <td class="px-2 py-1 overflow-hidden">
+                                            <div class="text-xs font-medium text-gray-900 truncate">${p.urunAdi}</div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-700">
-                                                ${p.kategori ? `<span class="px-2 py-1 text-xs rounded-full ${p.kategori === 'Kıyafet' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${p.kategori}</span>` : '<span class="text-gray-400">-</span>'}
-                                            </div>
+                                        <td class="px-2 py-1">
+                                            ${p.kategori ? `<span class="px-1 py-0.5 text-xs rounded-full ${p.kategori === 'Kıyafet' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} block truncate">${p.kategori}</span>` : '<span class="text-gray-400 text-xs">-</span>'}
                                         </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex flex-wrap gap-1">
+                                        <td class="px-2 py-1 overflow-hidden">
+                                            <div class="flex flex-wrap gap-0.5">
                                                 ${p.bedenler && p.bedenler.length > 0
                 ? p.bedenler.map(b => `
-                    <div class="mb-1">
-                        <span class="inline-block bg-gray-100 text-[10px] whitespace-nowrap rounded px-1.5 py-0.5 border border-gray-200">
-                            ${b.beden} beden ${b.miktar}
-                            ${b.renk ? `<span class="ml-1 px-1 py-0.5 bg-purple-100 text-purple-700 rounded">${b.renk}</span>` : ''}
-                        </span>
-                    </div>
+                    <span class="inline-block bg-gray-100 text-[9px] rounded px-1 py-0.5 border border-gray-200 whitespace-nowrap">${b.beden}/${b.miktar}${b.renk ? ' ' + b.renk : ''}</span>
                 `).join('')
-                : `<span class="inline-block bg-gray-100 text-[10px] whitespace-nowrap rounded px-1.5 py-0.5 border border-gray-200">${p.beden || '-'}</span>`}
+                : `<span class="inline-block bg-gray-100 text-[9px] rounded px-1 py-0.5 border border-gray-200">${p.beden || '-'}</span>`}
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-500">${(p.alisFiyati || 0).toFixed(2)} TL</div>
+                                        <td class="px-2 py-1 whitespace-nowrap">
+                                            <span class="text-xs text-gray-500">${(p.alisFiyati || 0).toFixed(2)}₺</span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="font-medium text-indigo-600">
-                                                ${(p.satisFiyati || 0).toFixed(2)} TL
-                                                ${p.indirim > 0 ?
-                `<span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">%${p.indirim} İndirim</span>
-                                                    <div class="text-sm text-gray-400">İndirimsiz: <s>${(p.satisFiyati * (1 + p.indirim / 100)).toFixed(2)} TL</s></div>`
-                : ''}
-                                            </div>
+                                        <td class="px-2 py-1 whitespace-nowrap">
+                                            <div class="text-xs font-medium text-indigo-600">${(p.satisFiyati || 0).toFixed(2)}₺${p.indirim > 0 ? `<span class="ml-1 text-red-500">%${p.indirim}</span>` : ''}</div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="flex flex-col">
-                                                ${(p.stokMiktari || 0) > 10
-                ? `<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">${(p.stokMiktari || 0)} Toplam</span>`
+                                        <td class="px-2 py-1 whitespace-nowrap">
+                                            ${(p.stokMiktari || 0) > 10
+                ? `<span class="px-1.5 py-0.5 text-xs rounded-full bg-green-100 text-green-800">${(p.stokMiktari || 0)}</span>`
                 : (p.stokMiktari || 0) > 3
-                    ? `<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">${(p.stokMiktari || 0)} Toplam</span>`
-                    : `<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">${(p.stokMiktari || 0)} Toplam</span>`}
-                                                ${p.bedenler && p.bedenler.length > 0 ? `<button onclick='showSizeDetails(${JSON.stringify(p.bedenler)}, "${p.urunAdi}")' class="text-[10px] text-indigo-600 hover:underline">Detay</button>` : ''}
-                                            </div>
+                    ? `<span class="px-1.5 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-800">${(p.stokMiktari || 0)}</span>`
+                    : `<span class="px-1.5 py-0.5 text-xs rounded-full bg-red-100 text-red-800">${(p.stokMiktari || 0)}</span>`}
+                                            ${p.bedenler && p.bedenler.length > 0 ? `<button onclick='showSizeDetails(${JSON.stringify(p.bedenler)}, "${p.urunAdi}")' class="text-[9px] text-indigo-600 hover:underline block">Detay</button>` : ''}
                                         </td>
-
-                                        <td class="px-3 py-2 text-right text-xs font-medium">
-                                            <div class="flex justify-end space-x-2">
-                                                <button onclick="editProduct(${p.id})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex">
-                                                    <i class="fas fa-edit"></i>
-                                                    <span>Düzenle</span>
+                                        <td class="px-2 py-1 text-right">
+                                            <div class="flex justify-end gap-1">
+                                                <button onclick="editProduct(${p.id})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-0.5 rounded text-xs transition inline-flex items-center gap-1">
+                                                    <i class="fas fa-edit text-xs"></i><span>Düzenle</span>
                                                 </button>
                                                 <button onclick="deleteProduct(${p.id})" 
-                                                    class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg transition duration-150 flex items-center space-x-1 inline-flex focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                                                    class="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded text-xs transition inline-flex items-center gap-1"
                                                     title="Bu ürünü sil">
-                                                    <i class="fas fa-trash-alt"></i>
+                                                    <i class="fas fa-trash-alt text-xs"></i>
                                                     <span>Sil</span>
                                                 </button>
                                             </div>
@@ -3324,7 +3319,10 @@ async function showBarcodePreview(items) {
                     <i class="fas fa-check-circle mr-2"></i>
                     Barkodlar Oluşturuldu (${globalIndex} Adet)
                 </h3>
-                <div class="space-x-2">
+                <div class="space-x-2 flex items-center">
+                    <select id="printerSelect" class="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                        <option value="manuel">Manuel Seçim (Diyalog)</option>
+                    </select>
                     <button onclick="printBarcodes()"
                         class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-md">
                         <i class="fas fa-print mr-2"></i>Yazdır
@@ -3363,6 +3361,26 @@ async function showBarcodePreview(items) {
                 currentIdx++;
             }
         });
+
+        // Load printers and select previously saved one
+        window.electronAPI.getPrinters().then(printers => {
+            const select = document.getElementById('printerSelect');
+            const savedPrinter = localStorage.getItem('defaultBarcodePrinter') || 'manuel';
+            
+            printers.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.name;
+                option.textContent = p.name;
+                if (p.name === savedPrinter) option.selected = true;
+                select.appendChild(option);
+            });
+
+            // Save on change
+            select.addEventListener('change', (e) => {
+                localStorage.setItem('defaultBarcodePrinter', e.target.value);
+            });
+        }).catch(err => console.error('Printers load error:', err));
+
     }, 100);
 }
 
@@ -3388,7 +3406,9 @@ async function printBarcodes() {
     });
 
     try {
-        const result = await window.electronAPI.printProductLabel(printContent);
+        const select = document.getElementById('printerSelect');
+        const selectedPrinter = select ? select.value : 'manuel';
+        const result = await window.electronAPI.printProductLabel(printContent, selectedPrinter);
         if (result.success) {
             showNotification('Barkodlar başarıyla yazdırıldı veya kuyruğa eklendi.');
         } else {

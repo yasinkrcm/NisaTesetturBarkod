@@ -1088,7 +1088,7 @@ ipcMain.handle('printEndOfDayReport', async (event, reportData) => {
 });
 
 // Ürün etiketi (Barkod) yazdırma fonksiyonu
-ipcMain.handle('printProductLabel', async (event, htmlContent) => {
+ipcMain.handle('printProductLabel', async (event, htmlContent, selectedPrinter) => {
     try {
         const { BrowserWindow } = require('electron');
         const printWindow = new BrowserWindow({
@@ -1116,23 +1116,20 @@ ipcMain.handle('printProductLabel', async (event, htmlContent) => {
             // Check paths in order: Production -> Dev (current dir) -> Dev (user path)
             if (fs.existsSync(productionQrPath)) {
                 qrPath = productionQrPath;
-                console.log('QR loaded from production path:', productionQrPath);
             } else if (fs.existsSync(devQrPath)) {
                 qrPath = devQrPath;
-                console.log('QR loaded from dev path:', devQrPath);
             } else if (fs.existsSync(userDevQrPath)) {
                 qrPath = userDevQrPath;
-                console.log('QR loaded from user dev path:', userDevQrPath);
             }
 
-            if (qrPath && fs.existsSync(qrPath)) {
+            if (qrPath) {
                 const qrData = fs.readFileSync(qrPath);
                 qrBase64 = `data:image/jpeg;base64,${qrData.toString('base64')}`;
             } else {
-                console.error('QR code not found in any path');
+                console.error('qr.jpeg not found in any standard location');
             }
-        } catch (err) {
-            console.error('Error reading qr.jpeg:', err);
+        } catch (qrError) {
+            console.error('Error reading QR code:', qrError);
         }
 
         // Inject base64 image into HTML
@@ -1164,8 +1161,58 @@ ipcMain.handle('printProductLabel', async (event, htmlContent) => {
                     justify-content: center;
                     align-items: center;
                     width: 40mm;
-                    height: 58mm; /* Etiket boyutu */
+                    height: 58mm;
                     overflow: hidden;
+                }
+                .barcode-item {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    width: 100%;
+                    height: 100%;
+                    background: white;
+                    text-align: center;
+                    padding: 1mm;
+                    box-sizing: border-box;
+                }
+                .product-name {
+                    font-size: 8pt;
+                    font-weight: bold;
+                    margin-bottom: 0px;
+                    line-height: 1;
+                    max-width: 38mm;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                }
+                .product-price {
+                    font-size: 11pt;
+                    font-weight: bold;
+                    margin-top: 0px;
+                    margin-bottom: 0px;
+                    line-height: 1;
+                }
+                .barcode-svg {
+                    width: 35mm !important;
+                    height: 10mm !important;
+                    margin: 0px 0;
+                }
+                .qr-img {
+                    width: 10mm;
+                    height: 10mm;
+                    margin-top: 1px;
+                }
+                .bottom-section {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 5px;
+                }
+                * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
                 }
             </style>
         </head>
@@ -1178,13 +1225,25 @@ ipcMain.handle('printProductLabel', async (event, htmlContent) => {
 
         await new Promise(resolve => printWindow.webContents.on('did-finish-load', resolve));
 
-        // Print - Open dialog (Ctrl+P style) as requested to fix size/settings
-        // "Argox" auto-selection removed
         await new Promise((resolve, reject) => {
-            printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
-                if (success) resolve();
-                else reject(reason);
-            });
+            if (selectedPrinter && selectedPrinter !== 'manuel') {
+                printWindow.webContents.print({ silent: true, printBackground: true, deviceName: selectedPrinter }, (success, reason) => {
+                    if (success) {
+                        resolve();
+                    } else {
+                        // Sessiz yazdırma başarısız olursa manuel diyaloğa düş
+                        printWindow.webContents.print({ silent: false, printBackground: true }, (s2, r2) => {
+                            if (s2) resolve();
+                            else reject(r2);
+                        });
+                    }
+                });
+            } else {
+                printWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
+                    if (success) resolve();
+                    else reject(reason);
+                });
+            }
         });
 
         if (!printWindow.isDestroyed()) printWindow.destroy();
@@ -1229,5 +1288,18 @@ ipcMain.handle('getQRBase64', () => {
     } catch (err) {
         console.error('Error reading QR for preview:', err);
         return null;
+    }
+});
+
+// Sistem yazıcılarını getir
+ipcMain.handle('getPrinters', async () => {
+    try {
+        const allWindows = BrowserWindow.getAllWindows();
+        if (allWindows.length === 0) return [];
+        const printers = await allWindows[0].webContents.getPrintersAsync();
+        return printers;
+    } catch (err) {
+        console.error('Failed to get printers:', err);
+        return [];
     }
 });
