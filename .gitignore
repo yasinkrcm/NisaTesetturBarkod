@@ -19,6 +19,7 @@ yarn-error.log*
 # Extra ignores
 backups/
 scratch/
+cloudSync.js
 
 # Optional: Windows ve macOS sistem dosyaları
 Thumbs.db
