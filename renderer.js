@@ -3329,9 +3329,9 @@ async function showBarcodePreview(items) {
                                     <div style="width: 65%; display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 2px solid black;">
                                         ${item.indirimsizFiyat && item.indirimsizFiyat > item.satisFiyati ? `
                                             <div style="text-decoration: line-through; font-size: 9px; font-weight: bold; color: black; line-height: 1; margin-bottom: 0px; white-space: nowrap;">${parseFloat(item.indirimsizFiyat).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺</div>
-                                            <div style="font-size: 13px; font-weight: 900; line-height: 1; white-space: nowrap;">${price} ₺</div>
+                                            <div style="font-size: 15px; font-weight: 900; font-family: 'Arial Black', Impact, sans-serif; letter-spacing: -0.5px; line-height: 1; white-space: nowrap;">${price} ₺</div>
                                         ` : `
-                                            <div style="font-size: 13px; font-weight: 900; white-space: nowrap;">${price} ₺</div>
+                                            <div style="font-size: 15px; font-weight: 900; font-family: 'Arial Black', Impact, sans-serif; letter-spacing: -0.5px; white-space: nowrap;">${price} ₺</div>
                                         `}
                                         <div style="font-size: 7px; font-weight: bold; margin-top: 1px;">KDV DAHİL</div>
                                     </div>

@@ -493,7 +493,7 @@ ipcMain.handle('addProduct', (event, product) => {
 
     // Calculate total stock from bedenler if available
     let stokMiktari = product.stokMiktari || 0;
-    if (product.bedenler && Array.isArray(product.bedenler)) {
+    if (product.bedenler && Array.isArray(product.bedenler) && product.bedenler.length > 0) {
         stokMiktari = product.bedenler.reduce((sum, b) => sum + (parseInt(b.miktar) || 0), 0);
     }
 
@@ -524,7 +524,7 @@ ipcMain.handle('updateProduct', (event, product) => {
 
         // Calculate total stock from bedenler if available
         let stokMiktari = product.stokMiktari || 0;
-        if (product.bedenler && Array.isArray(product.bedenler)) {
+        if (product.bedenler && Array.isArray(product.bedenler) && product.bedenler.length > 0) {
             stokMiktari = product.bedenler.reduce((sum, b) => sum + (parseInt(b.miktar) || 0), 0);
         }
 
